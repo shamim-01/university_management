@@ -783,7 +783,7 @@ const Teachers = () => {
                   required
                 />
 
-                {/* ✅ Fixed: Select Department - White Text Issue Fixed */}
+                {/* Fixed: Select Department - White Text Issue Fixed */}
                 <select
                   name="department"
                   value={formData.department}
