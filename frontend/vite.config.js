@@ -12,4 +12,9 @@ export default defineConfig({
       },
     },
   },
+  // ✅ Production Build Settings
+  build: {
+    outDir: 'dist',
+    sourcemap: false,
+  },
 });
