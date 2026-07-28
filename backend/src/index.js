@@ -29,7 +29,7 @@ const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:5173',
   'https://university-management-ruddy.vercel.app',
-  'https://your-frontend-domain.vercel.app', // আপনার Frontend URL
+  'https://university-management-ruddy.vercel.app', // আপনার Frontend URL
 ];
 
 // অথবা Environment Variable থেকে নিন
