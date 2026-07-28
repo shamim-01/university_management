@@ -108,10 +108,10 @@ export const getResultsByStudent = async (req, res, next) => {
     const filter = { student: studentId };
     if (semester) filter.semester = parseInt(semester);
 
-    // ✅ NO POPULATE - Direct find
+    // NO POPULATE - Direct find
     const results = await Result.find(filter).sort({ semester: -1 });
 
-    // ✅ Course info আলাদাভাবে fetch
+    // Course info আলাদাভাবে fetch
     const formattedResults = [];
     for (const result of results) {
       try {
@@ -150,7 +150,7 @@ export const getResultsByStudent = async (req, res, next) => {
       }
     }
 
-    // ✅ SEARCH FILTER (যদি search থাকে)
+    // ✅ SEARCH FILTER (Result এর মধ্যে Search)
     let filteredResults = formattedResults;
     if (search) {
       const searchLower = search.toLowerCase();

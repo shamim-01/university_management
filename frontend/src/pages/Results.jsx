@@ -4,8 +4,6 @@ import api from '../services/api';
 import {
   ClipboardDocumentCheckIcon,
   PlusIcon,
-  PencilIcon,
-  EyeIcon,
   MagnifyingGlassIcon,
   XMarkIcon,
   UserGroupIcon,
@@ -74,7 +72,7 @@ const Results = () => {
     }
   };
 
-  // Fetch Results for a student
+  // ✅ Fetch Results for a student - WITH SEARCH
   const fetchResults = async studentId => {
     if (!studentId) {
       setResults([]);
@@ -85,24 +83,27 @@ const Results = () => {
     try {
       setLoading(true);
       console.log('📥 Fetching results for student:', studentId);
+      console.log('📥 Search term:', searchTerm);
 
-      const response = await api.get(`/results/student/${studentId}`);
-      const data = response.data?.data || response.data || { results: [] };
+      const response = await api.get(`/results/student/${studentId}`, {
+        params: {
+          search: searchTerm || undefined,
+        },
+      });
 
+      console.log('📥 Response:', response.data);
+
+      const data = response.data?.data || { results: [], summary: {} };
       const resultsData = data.results || [];
+
       console.log('✅ Results loaded:', resultsData.length);
 
       setResults(resultsData);
-
-      const passed = resultsData.filter(r => r.status === 'passed').length;
-      const failed = resultsData.filter(r => r.status === 'failed').length;
-      const total = resultsData.length;
-
       setStats({
-        total,
-        passed,
-        failed,
-        passRate: total > 0 ? Math.round((passed / total) * 100) : 0,
+        total: data.summary?.totalCourses || 0,
+        passed: data.summary?.passed || 0,
+        failed: data.summary?.failed || 0,
+        passRate: data.summary?.passRate || 0,
       });
     } catch (err) {
       console.error('Failed to fetch results:', err);
@@ -124,11 +125,12 @@ const Results = () => {
     loadData();
   }, []);
 
+  // ✅ Search-এ change হলে fetch করুন
   useEffect(() => {
     if (selectedStudent) {
       fetchResults(selectedStudent);
     }
-  }, [selectedStudent]);
+  }, [searchTerm, selectedStudent]);
 
   const handleChange = e => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -286,7 +288,7 @@ const Results = () => {
               flexWrap: 'wrap',
             }}
           >
-            {/* ✅ Fixed: White text issue - Added proper styling */}
+            {/* Student Select */}
             <div
               style={{
                 display: 'flex',
@@ -322,7 +324,7 @@ const Results = () => {
                 >
                   Select Student
                 </option>
-                {students.map(student => (
+                {filteredStudents.map(student => (
                   <option
                     key={student._id}
                     value={student._id}
@@ -370,7 +372,7 @@ const Results = () => {
           </div>
         </div>
 
-        {/* Search Bar - Student Filter */}
+        {/* ✅ Search Bar - Result Search */}
         <div
           style={{
             display: 'flex',
@@ -389,7 +391,7 @@ const Results = () => {
           />
           <input
             type="text"
-            placeholder="Search students..."
+            placeholder="Search in results..."
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
             style={{
@@ -715,7 +717,7 @@ const Results = () => {
                             fontWeight: '500',
                           }}
                         >
-                          {result.course?.code || result.course}
+                          {result.course?.code || result.course || 'N/A'}
                         </span>
                         <span
                           style={{
@@ -835,7 +837,9 @@ const Results = () => {
                       fontSize: '0.875rem',
                     }}
                   >
-                    No results found for this student
+                    {searchTerm
+                      ? 'No results match your search'
+                      : 'No results found for this student'}
                   </td>
                 </tr>
               )}
