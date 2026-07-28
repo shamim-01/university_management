@@ -59,13 +59,13 @@ export const getAttendanceByCourse = async (req, res, next) => {
     }
     if (status) filter.status = status;
 
-    // ✅ course populate সরানো হয়েছে
+    // ✅ populate('course') সরিয়ে ফেলা হয়েছে
     const attendance = await Attendance.find(filter)
       .populate('student', 'studentId')
       .populate('markedBy', 'name')
       .sort({ date: -1 });
 
-    // ✅ Course info আলাদাভাবে fetch
+    // ✅ Course আলাদাভাবে fetch
     const course = await Course.findById(courseId).select('name code');
 
     res.status(200).json({
@@ -94,7 +94,7 @@ export const getAttendanceByStudent = async (req, res, next) => {
       .populate('markedBy', 'name')
       .sort({ date: -1 });
 
-    // ✅ Course info আলাদাভাবে fetch
+    // ✅ Course আলাদাভাবে fetch
     const attendanceWithCourses = await Promise.all(
       attendance.map(async item => {
         const courseData = await Course.findById(item.course).select(
