@@ -13,11 +13,16 @@ export const markAttendance = async (req, res, next) => {
     const existingAttendance = await Attendance.findOne({
       course,
       student,
-      date: new Date(date)
+      date: new Date(date),
     });
 
     if (existingAttendance) {
-      return next(new AppError('Attendance already marked for this student on this date', 400));
+      return next(
+        new AppError(
+          'Attendance already marked for this student on this date',
+          400,
+        ),
+      );
     }
 
     const attendance = await Attendance.create({
@@ -26,21 +31,20 @@ export const markAttendance = async (req, res, next) => {
       date,
       status,
       remarks,
-      markedBy: req.user._id
+      markedBy: req.user._id,
     });
 
     res.status(201).json({
       success: true,
-      data: attendance
+      data: attendance,
     });
   } catch (error) {
+    console.error('❌ Mark Attendance Error:', error);
     next(error);
   }
 };
 
-// @desc    Get attendance by course
-// @route   GET /api/attendance/course/:courseId
-// @access  Private
+// ✅ Get attendance by course - FIXED (No populate('course'))
 export const getAttendanceByCourse = async (req, res, next) => {
   try {
     const { courseId } = req.params;
@@ -50,29 +54,34 @@ export const getAttendanceByCourse = async (req, res, next) => {
     if (startDate && endDate) {
       filter.date = {
         $gte: new Date(startDate),
-        $lte: new Date(endDate)
+        $lte: new Date(endDate),
       };
     }
     if (status) filter.status = status;
 
+    // ✅ course populate সরানো হয়েছে
     const attendance = await Attendance.find(filter)
       .populate('student', 'studentId')
-      .populate('course', 'name code')
       .populate('markedBy', 'name')
       .sort({ date: -1 });
 
+    // ✅ Course info আলাদাভাবে fetch
+    const course = await Course.findById(courseId).select('name code');
+
     res.status(200).json({
       success: true,
-      data: attendance
+      data: {
+        attendance,
+        course: course || null,
+      },
     });
   } catch (error) {
+    console.error('❌ Get Attendance By Course Error:', error);
     next(error);
   }
 };
 
-// @desc    Get attendance by student
-// @route   GET /api/attendance/student/:studentId
-// @access  Private
+// ✅ Get attendance by student - FIXED
 export const getAttendanceByStudent = async (req, res, next) => {
   try {
     const { studentId } = req.params;
@@ -82,31 +91,45 @@ export const getAttendanceByStudent = async (req, res, next) => {
     if (course) filter.course = course;
 
     const attendance = await Attendance.find(filter)
-      .populate('course', 'name code credits')
       .populate('markedBy', 'name')
       .sort({ date: -1 });
 
+    // ✅ Course info আলাদাভাবে fetch
+    const attendanceWithCourses = await Promise.all(
+      attendance.map(async item => {
+        const courseData = await Course.findById(item.course).select(
+          'name code credits',
+        );
+        return {
+          ...item._doc,
+          course: courseData || { name: 'Course not found', code: 'N/A' },
+        };
+      }),
+    );
+
     const totalClasses = attendance.length;
-    const presentClasses = attendance.filter(a => a.status === 'present').length;
-    const attendancePercentage = totalClasses > 0 
-      ? (presentClasses / totalClasses) * 100 
-      : 0;
+    const presentClasses = attendance.filter(
+      a => a.status === 'present',
+    ).length;
+    const attendancePercentage =
+      totalClasses > 0 ? (presentClasses / totalClasses) * 100 : 0;
 
     res.status(200).json({
       success: true,
       data: {
-        attendance,
+        attendance: attendanceWithCourses,
         summary: {
           totalClasses,
           present: presentClasses,
           absent: attendance.filter(a => a.status === 'absent').length,
           late: attendance.filter(a => a.status === 'late').length,
           excused: attendance.filter(a => a.status === 'excused').length,
-          percentage: attendancePercentage.toFixed(2)
-        }
-      }
+          percentage: attendancePercentage.toFixed(2),
+        },
+      },
     });
   } catch (error) {
+    console.error('❌ Get Attendance By Student Error:', error);
     next(error);
   }
 };
@@ -119,7 +142,7 @@ export const updateAttendance = async (req, res, next) => {
     const attendance = await Attendance.findByIdAndUpdate(
       req.params.id,
       req.body,
-      { new: true, runValidators: true }
+      { new: true, runValidators: true },
     );
 
     if (!attendance) {
@@ -128,9 +151,10 @@ export const updateAttendance = async (req, res, next) => {
 
     res.status(200).json({
       success: true,
-      data: attendance
+      data: attendance,
     });
   } catch (error) {
+    console.error('❌ Update Attendance Error:', error);
     next(error);
   }
 };
