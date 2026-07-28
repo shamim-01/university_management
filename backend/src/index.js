@@ -5,7 +5,6 @@ import connectDB from './config/database.js';
 import mongoose from 'mongoose';
 import routes from './routes/index.js';
 
-// ✅ Models Import করুন (সব Model রেজিস্টার করার জন্য)
 import './models/User.js';
 import './models/Student.js';
 import './models/Teacher.js';
@@ -29,10 +28,9 @@ const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:5173',
   'https://university-management-ruddy.vercel.app',
-  'https://university-management-ruddy.vercel.app', // আপনার Frontend URL
+  'https://university-management-ruddy.vercel.app',
 ];
 
-// অথবা Environment Variable থেকে নিন
 const allowedOrigin = process.env.FRONTEND_URL || 'http://localhost:3000';
 
 app.use(
