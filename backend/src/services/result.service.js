@@ -4,7 +4,7 @@ import Course from '../models/Course.js';
 import { AppError } from '../utils/AppError.js';
 
 class ResultService {
-  // Calculate grade and grade point
+  // Calculate grade
   calculateGrade(marks) {
     if (marks >= 80) return { grade: 'A+', gradePoint: 4.0 };
     if (marks >= 75) return { grade: 'A', gradePoint: 3.75 };
@@ -20,170 +20,203 @@ class ResultService {
 
   // Update student CGPA
   async updateStudentCGPA(studentId) {
-    const results = await Result.find({ student: studentId });
-    const student = await Student.findById(studentId);
+    try {
+      const results = await Result.find({ student: studentId });
+      const student = await Student.findById(studentId);
 
-    if (results.length > 0) {
-      let totalCredits = 0;
-      let totalGradePoints = 0;
+      if (results.length > 0) {
+        let totalCredits = 0;
+        let totalGradePoints = 0;
 
-      for (const result of results) {
-        const course = await Course.findById(result.course);
-        if (course) {
-          totalCredits += course.credits;
-          totalGradePoints += result.gradePoint * course.credits;
+        for (const result of results) {
+          const course = await Course.findById(result.course);
+          if (course) {
+            totalCredits += course.credits;
+            totalGradePoints += result.gradePoint * course.credits;
+          }
         }
-      }
 
-      const cgpa = totalCredits > 0 ? totalGradePoints / totalCredits : 0;
-      student.cgpa = parseFloat(cgpa.toFixed(2));
-      await student.save();
+        const cgpa = totalCredits > 0 ? totalGradePoints / totalCredits : 0;
+        student.cgpa = parseFloat(cgpa.toFixed(2));
+        await student.save();
+      }
+    } catch (error) {
+      console.error('❌ Update CGPA Error:', error);
     }
   }
 
   // Add result
   async addResult(resultData, userId) {
-    const { student, course, semester, marks, remarks } = resultData;
+    try {
+      console.log('📝 Service: Adding result:', resultData);
 
-    // Check if result exists
-    const existingResult = await Result.findOne({ student, course, semester });
-    if (existingResult) {
-      throw new AppError(
-        'Result already exists for this student in this course',
-        400,
-      );
-    }
+      const { student, course, semester, marks, remarks } = resultData;
 
-    const { grade, gradePoint } = this.calculateGrade(marks);
-    const status = marks >= 40 ? 'passed' : 'failed';
+      const existingResult = await Result.findOne({
+        student,
+        course,
+        semester,
+      });
+      if (existingResult) {
+        throw new AppError(
+          'Result already exists for this student in this course',
+          400,
+        );
+      }
 
-    const result = await Result.create({
-      student,
-      course,
-      semester,
-      marks,
-      grade,
-      gradePoint,
-      status,
-      remarks,
-      approvedBy: userId,
-      isPublished: true,
-    });
+      const { grade, gradePoint } = this.calculateGrade(marks);
+      const status = marks >= 40 ? 'passed' : 'failed';
 
-    // Update student CGPA
-    await this.updateStudentCGPA(student);
-
-    return result;
-  }
-
-  // Get results by student
-  async getResultsByStudent(studentId, query) {
-    const { semester } = query;
-
-    const filter = { student: studentId };
-    if (semester) filter.semester = parseInt(semester);
-
-    const results = await Result.find(filter)
-      .populate('course', 'name code credits')
-      .populate('approvedBy', 'name')
-      .sort({ semester: -1 });
-
-    // Calculate summary
-    const totalCredits = results.reduce(
-      (sum, r) => sum + (r.course?.credits || 0),
-      0,
-    );
-    const totalGradePoints = results.reduce(
-      (sum, r) => sum + r.gradePoint * (r.course?.credits || 0),
-      0,
-    );
-    const cgpa = totalCredits > 0 ? totalGradePoints / totalCredits : 0;
-
-    return {
-      results,
-      summary: {
-        totalCourses: results.length,
-        passed: results.filter(r => r.status === 'passed').length,
-        failed: results.filter(r => r.status === 'failed').length,
-        cgpa: cgpa.toFixed(2),
-      },
-    };
-  }
-
-  // Get results by course
-  async getResultsByCourse(courseId, query) {
-    const { semester } = query;
-
-    const filter = { course: courseId };
-    if (semester) filter.semester = parseInt(semester);
-
-    const results = await Result.find(filter)
-      .populate('student', 'studentId')
-      .populate('approvedBy', 'name')
-      .sort({ marks: -1 });
-
-    return results;
-  }
-
-  // Update result
-  async updateResult(resultId, updateData, userId) {
-    const { marks, remarks } = updateData;
-
-    const result = await Result.findById(resultId);
-    if (!result) {
-      throw new AppError('Result not found', 404);
-    }
-
-    const { grade, gradePoint } = this.calculateGrade(marks);
-    const status = marks >= 40 ? 'passed' : 'failed';
-
-    const updatedResult = await Result.findByIdAndUpdate(
-      resultId,
-      {
+      const result = await Result.create({
+        student,
+        course,
+        semester,
         marks,
         grade,
         gradePoint,
         status,
         remarks,
         approvedBy: userId,
-      },
-      { new: true, runValidators: true },
-    );
+        isPublished: true,
+      });
 
-    // Update student CGPA
-    await this.updateStudentCGPA(result.student);
+      await this.updateStudentCGPA(student);
 
-    return updatedResult;
+      console.log('✅ Service: Result added:', result);
+      return result;
+    } catch (error) {
+      console.error('❌ Service Error:', error);
+      throw error;
+    }
   }
 
-  // Get result statistics
-  async getResultStats() {
-    const totalResults = await Result.countDocuments();
-    const passedResults = await Result.countDocuments({ status: 'passed' });
-    const failedResults = await Result.countDocuments({ status: 'failed' });
+  // ✅ Get results by student - COMPLETE FIX (No populate)
+  async getResultsByStudent(studentId, query) {
+    try {
+      console.log('📥 Service: Fetching results for student:', studentId);
 
-    const gradeDistribution = await Result.aggregate([
-      {
-        $group: {
-          _id: '$grade',
-          count: { $sum: 1 },
+      const { semester } = query;
+      const filter = { student: studentId };
+      if (semester) filter.semester = parseInt(semester);
+
+      // ✅ সরাসরি Result find করুন, populate করবেন না
+      const results = await Result.find(filter).sort({ semester: -1 });
+
+      // ✅ প্রতিটি result এর জন্য course আলাদাভাবে fetch করুন
+      const resultsWithCourses = await Promise.all(
+        results.map(async result => {
+          let courseData = null;
+          try {
+            courseData = await Course.findById(result.course).select(
+              'name code credits',
+            );
+          } catch (err) {
+            console.error('Course fetch error:', err);
+          }
+          return {
+            ...result._doc,
+            course: courseData || {
+              name: 'Course not found',
+              code: 'N/A',
+              credits: 0,
+            },
+          };
+        }),
+      );
+
+      console.log('✅ Service: Results found:', resultsWithCourses.length);
+
+      const totalCredits = resultsWithCourses.reduce(
+        (sum, r) => sum + (r.course?.credits || 0),
+        0,
+      );
+      const totalGradePoints = resultsWithCourses.reduce(
+        (sum, r) => sum + r.gradePoint * (r.course?.credits || 0),
+        0,
+      );
+      const cgpa = totalCredits > 0 ? totalGradePoints / totalCredits : 0;
+
+      return {
+        results: resultsWithCourses,
+        summary: {
+          totalCourses: resultsWithCourses.length,
+          passed: resultsWithCourses.filter(r => r.status === 'passed').length,
+          failed: resultsWithCourses.filter(r => r.status === 'failed').length,
+          cgpa: cgpa.toFixed(2),
         },
-      },
-      {
-        $sort: { _id: 1 },
-      },
-    ]);
+      };
+    } catch (error) {
+      console.error('❌ Service Error:', error);
+      throw error;
+    }
+  }
 
-    return {
-      totalResults,
-      passedResults,
-      failedResults,
-      passPercentage:
-        totalResults > 0
-          ? ((passedResults / totalResults) * 100).toFixed(2)
-          : 0,
-      gradeDistribution,
-    };
+  // Get results by course
+  async getResultsByCourse(courseId, query) {
+    try {
+      const { semester } = query;
+      const filter = { course: courseId };
+      if (semester) filter.semester = parseInt(semester);
+
+      const results = await Result.find(filter).sort({ marks: -1 });
+
+      // ✅ Student info populate
+      const resultsWithStudents = await Promise.all(
+        results.map(async result => {
+          const studentData = await Student.findById(result.student).select(
+            'studentId',
+          );
+          return {
+            ...result._doc,
+            student: studentData || { studentId: 'N/A' },
+          };
+        }),
+      );
+
+      return resultsWithStudents;
+    } catch (error) {
+      console.error('❌ Service Error:', error);
+      throw error;
+    }
+  }
+
+  // Update result
+  async updateResult(resultId, updateData, userId) {
+    try {
+      console.log('📝 Service: Updating result:', resultId);
+      console.log('📝 Service: Update data:', updateData);
+
+      const { marks, remarks } = updateData;
+
+      const result = await Result.findById(resultId);
+      if (!result) {
+        throw new AppError('Result not found', 404);
+      }
+
+      const { grade, gradePoint } = this.calculateGrade(marks);
+      const status = marks >= 40 ? 'passed' : 'failed';
+
+      const updatedResult = await Result.findByIdAndUpdate(
+        resultId,
+        {
+          marks,
+          grade,
+          gradePoint,
+          status,
+          remarks,
+          approvedBy: userId,
+        },
+        { new: true, runValidators: true },
+      );
+
+      await this.updateStudentCGPA(result.student);
+
+      console.log('✅ Service: Result updated:', updatedResult);
+      return updatedResult;
+    } catch (error) {
+      console.error('❌ Service Error:', error);
+      throw error;
+    }
   }
 }
 
