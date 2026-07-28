@@ -1,12 +1,11 @@
 import Attendance from '../models/Attendance.js';
+import Course from '../models/Course.js';
 import { AppError } from '../utils/AppError.js';
 
 class AttendanceService {
-  // Mark attendance
   async markAttendance(attendanceData, userId) {
     const { course, student, date, status, remarks } = attendanceData;
 
-    // Check if attendance already marked
     const existingAttendance = await Attendance.findOne({
       course,
       student,
@@ -32,7 +31,6 @@ class AttendanceService {
     return attendance;
   }
 
-  // Get attendance by course
   async getAttendanceByCourse(courseId, query) {
     const { startDate, endDate, status } = query;
 
@@ -47,14 +45,17 @@ class AttendanceService {
 
     const attendance = await Attendance.find(filter)
       .populate('student', 'studentId')
-      .populate('course', 'name code')
       .populate('markedBy', 'name')
       .sort({ date: -1 });
 
-    return attendance;
+    const course = await Course.findById(courseId).select('name code');
+
+    return {
+      attendance,
+      course: course || null,
+    };
   }
 
-  // Get attendance by student
   async getAttendanceByStudent(studentId, query) {
     const { course, semester } = query;
 
@@ -62,11 +63,21 @@ class AttendanceService {
     if (course) filter.course = course;
 
     const attendance = await Attendance.find(filter)
-      .populate('course', 'name code credits')
       .populate('markedBy', 'name')
       .sort({ date: -1 });
 
-    // Calculate attendance percentage
+    const attendanceWithCourses = await Promise.all(
+      attendance.map(async item => {
+        const courseData = await Course.findById(item.course).select(
+          'name code credits',
+        );
+        return {
+          ...item._doc,
+          course: courseData || { name: 'Course not found', code: 'N/A' },
+        };
+      }),
+    );
+
     const totalClasses = attendance.length;
     const presentClasses = attendance.filter(
       a => a.status === 'present',
@@ -75,7 +86,7 @@ class AttendanceService {
       totalClasses > 0 ? (presentClasses / totalClasses) * 100 : 0;
 
     return {
-      attendance,
+      attendance: attendanceWithCourses,
       summary: {
         totalClasses,
         present: presentClasses,
@@ -87,7 +98,6 @@ class AttendanceService {
     };
   }
 
-  // Update attendance
   async updateAttendance(attendanceId, updateData) {
     const attendance = await Attendance.findByIdAndUpdate(
       attendanceId,
@@ -100,50 +110,6 @@ class AttendanceService {
     }
 
     return attendance;
-  }
-
-  // Get attendance statistics
-  async getAttendanceStats(courseId) {
-    const totalRecords = await Attendance.countDocuments({ course: courseId });
-
-    const statusStats = await Attendance.aggregate([
-      {
-        $match: { course: courseId },
-      },
-      {
-        $group: {
-          _id: '$status',
-          count: { $sum: 1 },
-        },
-      },
-    ]);
-
-    const dailyStats = await Attendance.aggregate([
-      {
-        $match: { course: courseId },
-      },
-      {
-        $group: {
-          _id: { $dateToString: { format: '%Y-%m-%d', date: '$date' } },
-          present: {
-            $sum: { $cond: [{ $eq: ['$status', 'present'] }, 1, 0] },
-          },
-          absent: {
-            $sum: { $cond: [{ $eq: ['$status', 'absent'] }, 1, 0] },
-          },
-          total: { $sum: 1 },
-        },
-      },
-      {
-        $sort: { _id: 1 },
-      },
-    ]);
-
-    return {
-      totalRecords,
-      statusStats,
-      dailyStats,
-    };
   }
 }
 
