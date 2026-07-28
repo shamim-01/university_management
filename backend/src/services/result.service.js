@@ -24,7 +24,7 @@ class ResultService {
       const results = await Result.find({ student: studentId });
       const student = await Student.findById(studentId);
 
-      if (results.length > 0) {
+      if (results.length > 0 && student) {
         let totalCredits = 0;
         let totalGradePoints = 0;
 
@@ -90,16 +90,17 @@ class ResultService {
     }
   }
 
-  // ✅ Get results by student - COMPLETE FIX (No populate)
+  // ✅ Get results by student - WITH SEARCH
   async getResultsByStudent(studentId, query) {
     try {
       console.log('📥 Service: Fetching results for student:', studentId);
+      console.log('📥 Query:', query);
 
-      const { semester } = query;
+      const { semester, search } = query;
       const filter = { student: studentId };
       if (semester) filter.semester = parseInt(semester);
 
-      // ✅ সরাসরি Result find করুন, populate করবেন না
+      // ✅ সরাসরি Result find করুন
       const results = await Result.find(filter).sort({ semester: -1 });
 
       // ✅ প্রতিটি result এর জন্য course আলাদাভাবে fetch করুন
@@ -124,24 +125,48 @@ class ResultService {
         }),
       );
 
-      console.log('✅ Service: Results found:', resultsWithCourses.length);
+      // ✅ SEARCH FILTER (যদি search থাকে)
+      let filteredResults = resultsWithCourses;
+      if (search) {
+        const searchLower = search.toLowerCase();
+        filteredResults = resultsWithCourses.filter(r => {
+          const courseName = r.course?.name?.toLowerCase() || '';
+          const courseCode = r.course?.code?.toLowerCase() || '';
+          const grade = r.grade?.toLowerCase() || '';
+          const status = r.status?.toLowerCase() || '';
 
-      const totalCredits = resultsWithCourses.reduce(
+          return (
+            courseName.includes(searchLower) ||
+            courseCode.includes(searchLower) ||
+            grade.includes(searchLower) ||
+            status.includes(searchLower) ||
+            r.semester.toString().includes(searchLower) ||
+            r.marks.toString().includes(searchLower)
+          );
+        });
+        console.log('🔍 Search term:', search);
+        console.log('🔍 Filtered results:', filteredResults.length);
+      }
+
+      console.log('✅ Service: Results found:', filteredResults.length);
+
+      // Calculate summary
+      const totalCredits = filteredResults.reduce(
         (sum, r) => sum + (r.course?.credits || 0),
         0,
       );
-      const totalGradePoints = resultsWithCourses.reduce(
+      const totalGradePoints = filteredResults.reduce(
         (sum, r) => sum + r.gradePoint * (r.course?.credits || 0),
         0,
       );
       const cgpa = totalCredits > 0 ? totalGradePoints / totalCredits : 0;
 
       return {
-        results: resultsWithCourses,
+        results: filteredResults,
         summary: {
-          totalCourses: resultsWithCourses.length,
-          passed: resultsWithCourses.filter(r => r.status === 'passed').length,
-          failed: resultsWithCourses.filter(r => r.status === 'failed').length,
+          totalCourses: filteredResults.length,
+          passed: filteredResults.filter(r => r.status === 'passed').length,
+          failed: filteredResults.filter(r => r.status === 'failed').length,
           cgpa: cgpa.toFixed(2),
         },
       };

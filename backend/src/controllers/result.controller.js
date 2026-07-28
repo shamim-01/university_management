@@ -1,6 +1,7 @@
 import Result from '../models/Result.js';
 import Student from '../models/Student.js';
 import Course from '../models/Course.js';
+import User from '../models/User.js';
 import { AppError } from '../utils/AppError.js';
 
 // Calculate grade and grade point
@@ -95,13 +96,14 @@ export const addResult = async (req, res, next) => {
   }
 };
 
-// ✅ Get results by student - FIXED (No populate)
+// ✅ Get results by student - WITH SEARCH
 export const getResultsByStudent = async (req, res, next) => {
   try {
     const { studentId } = req.params;
-    const { semester } = req.query;
+    const { semester, search } = req.query;
 
     console.log('📥 Fetching results for student:', studentId);
+    console.log('📥 Search term:', search || 'No search');
 
     const filter = { student: studentId };
     if (semester) filter.semester = parseInt(semester);
@@ -116,14 +118,18 @@ export const getResultsByStudent = async (req, res, next) => {
         const course = await Course.findById(result.course).select(
           'name code credits',
         );
-        const approvedBy = await User?.findById(result.approvedBy).select(
+        const approvedBy = await User.findById(result.approvedBy).select(
           'name',
         );
 
         formattedResults.push({
           _id: result._id,
           student: result.student,
-          course: course || { name: 'Course not found', code: 'N/A' },
+          course: course || {
+            name: 'Course not found',
+            code: 'N/A',
+            credits: 0,
+          },
           semester: result.semester,
           marks: result.marks,
           grade: result.grade,
@@ -136,18 +142,40 @@ export const getResultsByStudent = async (req, res, next) => {
           updatedAt: result.updatedAt,
         });
       } catch (err) {
-        console.error('Course fetch error:', err);
+        console.error('Course fetch error for result:', result._id);
         formattedResults.push({
           ...result._doc,
-          course: { name: 'Course not found', code: 'N/A' },
+          course: { name: 'Course not found', code: 'N/A', credits: 0 },
         });
       }
+    }
+
+    // ✅ SEARCH FILTER (যদি search থাকে)
+    let filteredResults = formattedResults;
+    if (search) {
+      const searchLower = search.toLowerCase();
+      filteredResults = formattedResults.filter(r => {
+        const courseName = r.course?.name?.toLowerCase() || '';
+        const courseCode = r.course?.code?.toLowerCase() || '';
+        const grade = r.grade?.toLowerCase() || '';
+        const status = r.status?.toLowerCase() || '';
+
+        return (
+          courseName.includes(searchLower) ||
+          courseCode.includes(searchLower) ||
+          grade.includes(searchLower) ||
+          status.includes(searchLower) ||
+          r.semester.toString().includes(searchLower) ||
+          r.marks.toString().includes(searchLower)
+        );
+      });
+      console.log('🔍 Filtered results count:', filteredResults.length);
     }
 
     // Calculate summary
     let totalCredits = 0;
     let totalGradePoints = 0;
-    for (const r of formattedResults) {
+    for (const r of filteredResults) {
       if (r.course && r.course.credits) {
         totalCredits += r.course.credits;
         totalGradePoints += r.gradePoint * r.course.credits;
@@ -155,16 +183,16 @@ export const getResultsByStudent = async (req, res, next) => {
     }
     const cgpa = totalCredits > 0 ? totalGradePoints / totalCredits : 0;
 
-    console.log('✅ Results found:', formattedResults.length);
+    console.log('✅ Final results count:', filteredResults.length);
 
     res.status(200).json({
       success: true,
       data: {
-        results: formattedResults,
+        results: filteredResults,
         summary: {
-          totalCourses: formattedResults.length,
-          passed: formattedResults.filter(r => r.status === 'passed').length,
-          failed: formattedResults.filter(r => r.status === 'failed').length,
+          totalCourses: filteredResults.length,
+          passed: filteredResults.filter(r => r.status === 'passed').length,
+          failed: filteredResults.filter(r => r.status === 'failed').length,
           cgpa: cgpa.toFixed(2),
         },
       },
@@ -182,6 +210,8 @@ export const getResultsByCourse = async (req, res, next) => {
   try {
     const { courseId } = req.params;
     const { semester } = req.query;
+
+    console.log('📥 Fetching results for course:', courseId);
 
     const filter = { course: courseId };
     if (semester) filter.semester = parseInt(semester);
@@ -203,6 +233,8 @@ export const getResultsByCourse = async (req, res, next) => {
         formattedResults.push(result._doc);
       }
     }
+
+    console.log('✅ Results found:', formattedResults.length);
 
     res.status(200).json({
       success: true,
