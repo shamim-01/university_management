@@ -4,7 +4,6 @@ import Course from '../models/Course.js';
 import { AppError } from '../utils/AppError.js';
 
 class ResultService {
-  // Calculate grade
   calculateGrade(marks) {
     if (marks >= 80) return { grade: 'A+', gradePoint: 4.0 };
     if (marks >= 75) return { grade: 'A', gradePoint: 3.75 };
@@ -18,7 +17,6 @@ class ResultService {
     return { grade: 'F', gradePoint: 0 };
   }
 
-  // Update student CGPA
   async updateStudentCGPA(studentId) {
     try {
       const results = await Result.find({ student: studentId });
@@ -45,10 +43,9 @@ class ResultService {
     }
   }
 
-  // Add result
   async addResult(resultData, userId) {
     try {
-      console.log('📝 Service: Adding result:', resultData);
+      console.log('📝 Adding result:', resultData);
 
       const { student, course, semester, marks, remarks } = resultData;
 
@@ -82,7 +79,7 @@ class ResultService {
 
       await this.updateStudentCGPA(student);
 
-      console.log('✅ Service: Result added:', result);
+      console.log('✅ Result added:', result);
       return result;
     } catch (error) {
       console.error('❌ Service Error:', error);
@@ -90,75 +87,100 @@ class ResultService {
     }
   }
 
-  // ✅ Get results by student - WITH SEARCH
+  // ✅ Optimized Search - Faster & Better
   async getResultsByStudent(studentId, query) {
     try {
-      console.log('📥 Service: Fetching results for student:', studentId);
-      console.log('📥 Query:', query);
+      console.log('📥 Fetching results for student:', studentId);
 
-      const { semester, search } = query;
+      const { semester, search } = query || {};
       const filter = { student: studentId };
       if (semester) filter.semester = parseInt(semester);
 
-      // ✅ সরাসরি Result find করুন
+      // Get results
       const results = await Result.find(filter).sort({ semester: -1 });
 
-      // ✅ প্রতিটি result এর জন্য course আলাদাভাবে fetch করুন
-      const resultsWithCourses = await Promise.all(
-        results.map(async result => {
-          let courseData = null;
-          try {
-            courseData = await Course.findById(result.course).select(
-              'name code credits',
-            );
-          } catch (err) {
-            console.error('Course fetch error:', err);
-          }
-          return {
-            ...result._doc,
-            course: courseData || {
-              name: 'Course not found',
-              code: 'N/A',
-              credits: 0,
-            },
-          };
-        }),
-      );
+      if (results.length === 0) {
+        return {
+          results: [],
+          summary: {
+            totalCourses: 0,
+            passed: 0,
+            failed: 0,
+            cgpa: '0.00',
+          },
+        };
+      }
 
-      // ✅ SEARCH FILTER (যদি search থাকে)
-      let filteredResults = resultsWithCourses;
-      if (search) {
-        const searchLower = search.toLowerCase();
-        filteredResults = resultsWithCourses.filter(r => {
+      // ✅ Smart Course Fetch (একবারে সব Course ID নিন)
+      const courseIds = [...new Set(results.map(r => r.course.toString()))];
+      const courses = await Course.find({ _id: { $in: courseIds } }).select(
+        'name code credits',
+      );
+      const courseMap = {};
+      courses.forEach(c => {
+        courseMap[c._id.toString()] = c;
+      });
+
+      // Format results
+      const formattedResults = results.map(result => {
+        const course = courseMap[result.course.toString()];
+        return {
+          _id: result._id,
+          student: result.student,
+          course: course || {
+            name: 'Course not found',
+            code: 'N/A',
+            credits: 0,
+          },
+          semester: result.semester,
+          marks: result.marks,
+          grade: result.grade,
+          gradePoint: result.gradePoint,
+          status: result.status,
+          remarks: result.remarks,
+          createdAt: result.createdAt,
+          updatedAt: result.updatedAt,
+        };
+      });
+
+      // ✅ Search Filter
+      let filteredResults = formattedResults;
+      if (search && search.trim()) {
+        const searchLower = search.toLowerCase().trim();
+        filteredResults = formattedResults.filter(r => {
           const courseName = r.course?.name?.toLowerCase() || '';
           const courseCode = r.course?.code?.toLowerCase() || '';
           const grade = r.grade?.toLowerCase() || '';
           const status = r.status?.toLowerCase() || '';
+          const semesterStr = r.semester?.toString() || '';
+          const marksStr = r.marks?.toString() || '';
 
           return (
             courseName.includes(searchLower) ||
             courseCode.includes(searchLower) ||
             grade.includes(searchLower) ||
             status.includes(searchLower) ||
-            r.semester.toString().includes(searchLower) ||
-            r.marks.toString().includes(searchLower)
+            semesterStr.includes(searchLower) ||
+            marksStr.includes(searchLower)
           );
         });
-        console.log('🔍 Search term:', search);
-        console.log('🔍 Filtered results:', filteredResults.length);
+        console.log(
+          '🔍 Search term:',
+          search,
+          'Filtered:',
+          filteredResults.length,
+        );
       }
 
-      console.log('✅ Service: Results found:', filteredResults.length);
-
-      // Calculate summary
-      const totalCredits = filteredResults.reduce(
-        (sum, r) => sum + (r.course?.credits || 0),
-        0,
-      );
-      const totalGradePoints = filteredResults.reduce(
-        (sum, r) => sum + r.gradePoint * (r.course?.credits || 0),
-        0,
-      );
+      // Summary
+      let totalCredits = 0;
+      let totalGradePoints = 0;
+      for (const r of filteredResults) {
+        if (r.course && r.course.credits) {
+          totalCredits += r.course.credits;
+          totalGradePoints += r.gradePoint * r.course.credits;
+        }
+      }
       const cgpa = totalCredits > 0 ? totalGradePoints / totalCredits : 0;
 
       return {
@@ -176,7 +198,6 @@ class ResultService {
     }
   }
 
-  // Get results by course
   async getResultsByCourse(courseId, query) {
     try {
       const { semester } = query;
@@ -185,31 +206,33 @@ class ResultService {
 
       const results = await Result.find(filter).sort({ marks: -1 });
 
-      // ✅ Student info populate
-      const resultsWithStudents = await Promise.all(
-        results.map(async result => {
-          const studentData = await Student.findById(result.student).select(
-            'studentId',
-          );
-          return {
-            ...result._doc,
-            student: studentData || { studentId: 'N/A' },
-          };
-        }),
+      const studentIds = [...new Set(results.map(r => r.student.toString()))];
+      const students = await Student.find({ _id: { $in: studentIds } }).select(
+        'studentId',
       );
+      const studentMap = {};
+      students.forEach(s => {
+        studentMap[s._id.toString()] = s;
+      });
 
-      return resultsWithStudents;
+      const formattedResults = results.map(result => {
+        const student = studentMap[result.student.toString()];
+        return {
+          ...result._doc,
+          student: student || { studentId: 'N/A' },
+        };
+      });
+
+      return formattedResults;
     } catch (error) {
       console.error('❌ Service Error:', error);
       throw error;
     }
   }
 
-  // Update result
   async updateResult(resultId, updateData, userId) {
     try {
-      console.log('📝 Service: Updating result:', resultId);
-      console.log('📝 Service: Update data:', updateData);
+      console.log('📝 Updating result:', resultId);
 
       const { marks, remarks } = updateData;
 
@@ -236,7 +259,7 @@ class ResultService {
 
       await this.updateStudentCGPA(result.student);
 
-      console.log('✅ Service: Result updated:', updatedResult);
+      console.log('✅ Result updated:', updatedResult);
       return updatedResult;
     } catch (error) {
       console.error('❌ Service Error:', error);

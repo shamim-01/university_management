@@ -44,7 +44,9 @@ export const markAttendance = async (req, res, next) => {
   }
 };
 
-// ✅ Get attendance by course - FIXED (No populate('course'))
+// @desc    Get attendance by course
+// @route   GET /api/attendance/course/:courseId
+// @access  Private
 export const getAttendanceByCourse = async (req, res, next) => {
   try {
     const { courseId } = req.params;
@@ -59,13 +61,11 @@ export const getAttendanceByCourse = async (req, res, next) => {
     }
     if (status) filter.status = status;
 
-    // ✅ populate('course') সরিয়ে ফেলা হয়েছে
     const attendance = await Attendance.find(filter)
       .populate('student', 'studentId')
       .populate('markedBy', 'name')
       .sort({ date: -1 });
 
-    // ✅ Course আলাদাভাবে fetch
     const course = await Course.findById(courseId).select('name code');
 
     res.status(200).json({
@@ -81,7 +81,9 @@ export const getAttendanceByCourse = async (req, res, next) => {
   }
 };
 
-// ✅ Get attendance by student - FIXED
+// @desc    Get attendance by student
+// @route   GET /api/attendance/student/:studentId
+// @access  Private
 export const getAttendanceByStudent = async (req, res, next) => {
   try {
     const { studentId } = req.params;
@@ -94,7 +96,6 @@ export const getAttendanceByStudent = async (req, res, next) => {
       .populate('markedBy', 'name')
       .sort({ date: -1 });
 
-    // ✅ Course আলাদাভাবে fetch
     const attendanceWithCourses = await Promise.all(
       attendance.map(async item => {
         const courseData = await Course.findById(item.course).select(

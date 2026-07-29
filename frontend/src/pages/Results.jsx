@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import {
@@ -9,6 +9,8 @@ import {
   UserGroupIcon,
   BookOpenIcon,
   AcademicCapIcon,
+  PencilIcon,
+  TrashIcon,
 } from '@heroicons/react/24/outline';
 
 const Results = () => {
@@ -21,6 +23,8 @@ const Results = () => {
   const [showModal, setShowModal] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
   const [stats, setStats] = useState({
     total: 0,
     passed: 0,
@@ -34,6 +38,7 @@ const Results = () => {
     marks: '',
     remarks: '',
   });
+  const timeoutRef = useRef(null);
 
   const canManageResults = isAdmin() || isTeacher();
 
@@ -72,8 +77,8 @@ const Results = () => {
     }
   };
 
-  // ✅ Fetch Results for a student - WITH SEARCH
-  const fetchResults = async studentId => {
+  // ✅ Fetch Results with Optimized Search
+  const fetchResults = useCallback(async (studentId, search = '') => {
     if (!studentId) {
       setResults([]);
       setStats({ total: 0, passed: 0, failed: 0, passRate: 0 });
@@ -82,21 +87,16 @@ const Results = () => {
 
     try {
       setLoading(true);
-      console.log('📥 Fetching results for student:', studentId);
-      console.log('📥 Search term:', searchTerm);
 
       const response = await api.get(`/results/student/${studentId}`, {
         params: {
-          search: searchTerm || undefined,
+          search: search || undefined,
         },
+        timeout: 10000,
       });
-
-      console.log('📥 Response:', response.data);
 
       const data = response.data?.data || { results: [], summary: {} };
       const resultsData = data.results || [];
-
-      console.log('✅ Results loaded:', resultsData.length);
 
       setResults(resultsData);
       setStats({
@@ -107,11 +107,15 @@ const Results = () => {
       });
     } catch (err) {
       console.error('Failed to fetch results:', err);
-      setError('Failed to load results');
+      if (err.code === 'ECONNABORTED') {
+        setError('Request timeout. Please try again.');
+      } else {
+        setError('Failed to load results');
+      }
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     const loadData = async () => {
@@ -119,18 +123,37 @@ const Results = () => {
       await fetchCourses();
       if (studentsData.length > 0) {
         setSelectedStudent(studentsData[0]._id);
-        await fetchResults(studentsData[0]._id);
+        await fetchResults(studentsData[0]._id, '');
       }
     };
     loadData();
   }, []);
 
-  // ✅ Search-এ change হলে fetch করুন
+  // ✅ Debounce Search - 300ms
+  useEffect(() => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+
+    setIsSearching(true);
+    timeoutRef.current = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+      setIsSearching(false);
+    }, 300);
+
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, [searchTerm]);
+
+  // ✅ Search Trigger
   useEffect(() => {
     if (selectedStudent) {
-      fetchResults(selectedStudent);
+      fetchResults(selectedStudent, debouncedSearch);
     }
-  }, [searchTerm, selectedStudent]);
+  }, [debouncedSearch, selectedStudent, fetchResults]);
 
   const handleChange = e => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -158,7 +181,7 @@ const Results = () => {
         marks: '',
         remarks: '',
       });
-      await fetchResults(selectedStudent);
+      await fetchResults(selectedStudent, debouncedSearch);
       alert('✅ Result added successfully!');
     } catch (err) {
       console.error('Failed to add result:', err);
@@ -166,7 +189,7 @@ const Results = () => {
     }
   };
 
-  // Update Result
+  // ✅ Update Result
   const handleUpdateResult = async (resultId, newMarks) => {
     if (!canManageResults) {
       setError('You do not have permission to update results');
@@ -175,11 +198,37 @@ const Results = () => {
 
     try {
       await api.put(`/results/${resultId}`, { marks: newMarks });
-      await fetchResults(selectedStudent);
+      await fetchResults(selectedStudent, debouncedSearch);
       alert('✅ Result updated successfully!');
     } catch (err) {
       console.error('Failed to update result:', err);
       setError(err.response?.data?.message || 'Failed to update result');
+    }
+  };
+
+  // ✅ NEW: Delete Result
+  const handleDeleteResult = async resultId => {
+    if (!isAdmin()) {
+      alert('❌ Only admin can delete results!');
+      return;
+    }
+
+    if (
+      !window.confirm(
+        '⚠️ Are you sure you want to delete this result? This action cannot be undone!',
+      )
+    ) {
+      return;
+    }
+
+    try {
+      await api.delete(`/results/${resultId}`);
+      await fetchResults(selectedStudent, debouncedSearch);
+      alert('✅ Result deleted successfully!');
+    } catch (err) {
+      console.error('Failed to delete result:', err);
+      setError(err.response?.data?.message || 'Failed to delete result');
+      alert('❌ Failed to delete result');
     }
   };
 
@@ -191,6 +240,16 @@ const Results = () => {
     if (grade === 'C+' || grade === 'C' || grade === 'D')
       return 'bg-yellow-500/20 text-yellow-400';
     return 'bg-red-500/20 text-red-400';
+  };
+
+  // ✅ NEW: Get Grade with Grade Point
+  const getGradeDisplay = (grade, gradePoint) => {
+    return `${grade} (${gradePoint?.toFixed(2) || '0.00'})`;
+  };
+
+  const clearSearch = () => {
+    setSearchTerm('');
+    setDebouncedSearch('');
   };
 
   if (loading) {
@@ -253,7 +312,7 @@ const Results = () => {
                 gap: '0.75rem',
               }}
             >
-              <span>Results</span>
+              <span>📚 Results</span>
               <span
                 style={{
                   fontSize: '0.875rem',
@@ -372,7 +431,7 @@ const Results = () => {
           </div>
         </div>
 
-        {/* ✅ Search Bar - Result Search */}
+        {/* Search Bar */}
         <div
           style={{
             display: 'flex',
@@ -404,9 +463,21 @@ const Results = () => {
               padding: '0.25rem 0',
             }}
           />
-          {searchTerm && (
+          {isSearching && (
+            <div
+              style={{
+                width: '1.25rem',
+                height: '1.25rem',
+                border: '2px solid rgba(139, 92, 246, 0.2)',
+                borderTop: '2px solid #8b5cf6',
+                borderRadius: '50%',
+                animation: 'spin 0.8s linear infinite',
+              }}
+            />
+          )}
+          {searchTerm && !isSearching && (
             <button
-              onClick={() => setSearchTerm('')}
+              onClick={clearSearch}
               style={{
                 background: 'transparent',
                 border: 'none',
@@ -419,6 +490,13 @@ const Results = () => {
             </button>
           )}
         </div>
+
+        {searchTerm && (
+          <p style={{ color: '#6b7280', fontSize: '0.75rem' }}>
+            Found {results.length} result{results.length !== 1 ? 's' : ''} for "
+            {searchTerm}"
+          </p>
+        )}
       </div>
 
       {error && (
@@ -619,6 +697,19 @@ const Results = () => {
                     letterSpacing: '0.05em',
                   }}
                 >
+                  #
+                </th>
+                <th
+                  style={{
+                    padding: '0.75rem 1rem',
+                    textAlign: 'left',
+                    color: '#9ca3af',
+                    fontSize: '0.75rem',
+                    fontWeight: '600',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                  }}
+                >
                   Course
                 </th>
                 <th
@@ -708,6 +799,15 @@ const Results = () => {
                       e.currentTarget.style.background = 'transparent';
                     }}
                   >
+                    <td
+                      style={{
+                        padding: '0.75rem 1rem',
+                        color: '#6b7280',
+                        fontSize: '0.875rem',
+                      }}
+                    >
+                      {index + 1}
+                    </td>
                     <td style={{ padding: '0.75rem 1rem' }}>
                       <div>
                         <span
@@ -748,6 +848,15 @@ const Results = () => {
                       }}
                     >
                       {result.marks}
+                      <span
+                        style={{
+                          color: '#6b7280',
+                          fontSize: '0.75rem',
+                          marginLeft: '0.25rem',
+                        }}
+                      >
+                        /100
+                      </span>
                     </td>
                     <td style={{ padding: '0.75rem 1rem' }}>
                       <span
@@ -758,9 +867,10 @@ const Results = () => {
                           fontWeight: '600',
                           background: getGradeColor(result.grade).split(' ')[0],
                           color: getGradeColor(result.grade).split(' ')[1],
+                          border: '1px solid transparent',
                         }}
                       >
-                        {result.grade}
+                        {getGradeDisplay(result.grade, result.gradePoint)}
                       </span>
                     </td>
                     <td style={{ padding: '0.75rem 1rem' }}>
@@ -778,58 +888,102 @@ const Results = () => {
                             result.status === 'passed' ? '#4ade80' : '#f87171',
                         }}
                       >
-                        {result.status}
+                        {result.status === 'passed' ? '✅ Passed' : '❌ Failed'}
                       </span>
                     </td>
                     <td style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>
-                      {canManageResults ? (
-                        <button
-                          onClick={() => {
-                            const newMarks = prompt(
-                              'Enter new marks:',
-                              result.marks,
-                            );
-                            if (newMarks !== null) {
-                              handleUpdateResult(
-                                result._id,
-                                parseInt(newMarks),
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'flex-end',
+                          gap: '0.5rem',
+                        }}
+                      >
+                        {canManageResults && (
+                          <button
+                            onClick={() => {
+                              const newMarks = prompt(
+                                `Enter new marks for ${result.course?.code || 'course'}:`,
+                                result.marks,
                               );
-                            }
-                          }}
-                          style={{
-                            padding: '0.3rem 0.8rem',
-                            borderRadius: '0.375rem',
-                            background: 'rgba(139,92,246,0.15)',
-                            color: '#a78bfa',
-                            border: 'none',
-                            cursor: 'pointer',
-                            fontSize: '0.75rem',
-                            fontWeight: '500',
-                            transition: 'all 0.2s ease',
-                          }}
-                          onMouseEnter={e => {
-                            e.currentTarget.style.background =
-                              'rgba(139,92,246,0.3)';
-                          }}
-                          onMouseLeave={e => {
-                            e.currentTarget.style.background =
-                              'rgba(139,92,246,0.15)';
-                          }}
-                        >
-                          Edit
-                        </button>
-                      ) : (
-                        <span style={{ color: '#6b7280', fontSize: '0.75rem' }}>
-                          View Only
-                        </span>
-                      )}
+                              if (newMarks !== null && !isNaN(newMarks)) {
+                                handleUpdateResult(
+                                  result._id,
+                                  parseInt(newMarks),
+                                );
+                              }
+                            }}
+                            style={{
+                              padding: '0.3rem 0.8rem',
+                              borderRadius: '0.375rem',
+                              background: 'rgba(59,130,246,0.15)',
+                              color: '#60a5fa',
+                              border: 'none',
+                              cursor: 'pointer',
+                              fontSize: '0.75rem',
+                              fontWeight: '500',
+                              transition: 'all 0.2s ease',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.25rem',
+                            }}
+                            onMouseEnter={e => {
+                              e.currentTarget.style.background =
+                                'rgba(59,130,246,0.3)';
+                            }}
+                            onMouseLeave={e => {
+                              e.currentTarget.style.background =
+                                'rgba(59,130,246,0.15)';
+                            }}
+                          >
+                            <PencilIcon
+                              style={{ width: '0.875rem', height: '0.875rem' }}
+                            />
+                            Edit
+                          </button>
+                        )}
+
+                        {isAdmin() && (
+                          <button
+                            onClick={() => handleDeleteResult(result._id)}
+                            style={{
+                              padding: '0.3rem 0.8rem',
+                              borderRadius: '0.375rem',
+                              background: 'rgba(239,68,68,0.15)',
+                              color: '#f87171',
+                              border: 'none',
+                              cursor: 'pointer',
+                              fontSize: '0.75rem',
+                              fontWeight: '500',
+                              transition: 'all 0.2s ease',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.25rem',
+                            }}
+                            onMouseEnter={e => {
+                              e.currentTarget.style.background =
+                                'rgba(239,68,68,0.3)';
+                            }}
+                            onMouseLeave={e => {
+                              e.currentTarget.style.background =
+                                'rgba(239,68,68,0.15)';
+                            }}
+                          >
+                            <TrashIcon
+                              style={{ width: '0.875rem', height: '0.875rem' }}
+                            />
+                            Delete
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))
               ) : (
                 <tr>
                   <td
-                    colSpan="6"
+                    colSpan="7"
                     style={{
                       textAlign: 'center',
                       padding: '3rem',
@@ -866,6 +1020,7 @@ const Results = () => {
             padding: '1rem',
             animation: 'fadeIn 0.3s ease',
           }}
+          onClick={e => e.target === e.currentTarget && setShowModal(false)}
         >
           <div
             style={{
@@ -1165,8 +1320,8 @@ const Results = () => {
           to { transform: rotate(360deg); }
         }
         @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
+          from { opacity: 0; transform: scale(0.95); }
+          to { opacity: 1; transform: scale(1); }
         }
       `}</style>
     </div>

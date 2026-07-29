@@ -11,14 +11,12 @@ const router = express.Router();
 
 router.use(protect);
 
-// ✅ Admin এবং Teacher Mark করতে পারে
-router.post('/', restrictTo('admin', 'teacher'), markAttendance);
-
 // ✅ সবাই দেখতে পারে
 router.get('/course/:courseId', getAttendanceByCourse);
 router.get('/student/:studentId', getAttendanceByStudent);
 
-// ✅ Admin এবং Teacher Update করতে পারে
+// ✅ Admin এবং Teacher Mark/Update করতে পারে
+router.post('/', restrictTo('admin', 'teacher'), markAttendance);
 router.put('/:id', restrictTo('admin', 'teacher'), updateAttendance);
 
 export default router;

@@ -1,7 +1,6 @@
 import Result from '../models/Result.js';
 import Student from '../models/Student.js';
 import Course from '../models/Course.js';
-import User from '../models/User.js';
 import { AppError } from '../utils/AppError.js';
 
 // Calculate grade and grade point
@@ -54,7 +53,6 @@ export const addResult = async (req, res, next) => {
 
     const { student, course, semester, marks, remarks } = req.body;
 
-    // Check if result exists
     const existingResult = await Result.findOne({ student, course, semester });
     if (existingResult) {
       return next(
@@ -81,7 +79,6 @@ export const addResult = async (req, res, next) => {
       isPublished: true,
     });
 
-    // Update student CGPA
     await updateStudentCGPA(student);
 
     console.log('✅ Result added:', result);
@@ -96,80 +93,115 @@ export const addResult = async (req, res, next) => {
   }
 };
 
-// ✅ Get results by student - WITH SEARCH
+// ✅ Get ALL results OR specific student
 export const getResultsByStudent = async (req, res, next) => {
   try {
     const { studentId } = req.params;
     const { semester, search } = req.query;
 
-    console.log('📥 Fetching results for student:', studentId);
-    console.log('📥 Search term:', search || 'No search');
+    console.log('📥 Fetching results...');
+    console.log('📍 Student ID:', studentId || 'ALL');
+    console.log('🔍 Search term:', search || 'No search');
 
-    const filter = { student: studentId };
-    if (semester) filter.semester = parseInt(semester);
-
-    // NO POPULATE - Direct find
-    const results = await Result.find(filter).sort({ semester: -1 });
-
-    // Course info আলাদাভাবে fetch
-    const formattedResults = [];
-    for (const result of results) {
-      try {
-        const course = await Course.findById(result.course).select(
-          'name code credits',
-        );
-        const approvedBy = await User.findById(result.approvedBy).select(
-          'name',
-        );
-
-        formattedResults.push({
-          _id: result._id,
-          student: result.student,
-          course: course || {
-            name: 'Course not found',
-            code: 'N/A',
-            credits: 0,
-          },
-          semester: result.semester,
-          marks: result.marks,
-          grade: result.grade,
-          gradePoint: result.gradePoint,
-          status: result.status,
-          remarks: result.remarks,
-          approvedBy: approvedBy || null,
-          isPublished: result.isPublished,
-          createdAt: result.createdAt,
-          updatedAt: result.updatedAt,
-        });
-      } catch (err) {
-        console.error('Course fetch error for result:', result._id);
-        formattedResults.push({
-          ...result._doc,
-          course: { name: 'Course not found', code: 'N/A', credits: 0 },
-        });
-      }
+    // Build filter - 'all' হলে সব Student, নাহলে নির্দিষ্ট Student
+    const filter = {};
+    if (studentId && studentId !== 'all' && studentId !== 'undefined') {
+      filter.student = studentId;
     }
 
-    // ✅ SEARCH FILTER (Result এর মধ্যে Search)
-    let filteredResults = formattedResults;
-    if (search) {
-      const searchLower = search.toLowerCase();
-      filteredResults = formattedResults.filter(r => {
-        const courseName = r.course?.name?.toLowerCase() || '';
-        const courseCode = r.course?.code?.toLowerCase() || '';
-        const grade = r.grade?.toLowerCase() || '';
-        const status = r.status?.toLowerCase() || '';
+    const results = await Result.find(filter).sort({ semester: -1 });
 
-        return (
-          courseName.includes(searchLower) ||
-          courseCode.includes(searchLower) ||
-          grade.includes(searchLower) ||
-          status.includes(searchLower) ||
-          r.semester.toString().includes(searchLower) ||
-          r.marks.toString().includes(searchLower)
-        );
+    console.log(`📊 Total results in DB: ${results.length}`);
+
+    if (results.length === 0) {
+      return res.status(200).json({
+        success: true,
+        data: {
+          results: [],
+          summary: {
+            totalCourses: 0,
+            passed: 0,
+            failed: 0,
+            cgpa: '0.00',
+          },
+        },
       });
-      console.log('🔍 Filtered results count:', filteredResults.length);
+    }
+
+    // Fetch all courses
+    const courseIds = [...new Set(results.map(r => r.course.toString()))];
+    const courses = await Course.find({ _id: { $in: courseIds } }).select(
+      'name code credits',
+    );
+    const courseMap = {};
+    courses.forEach(c => {
+      courseMap[c._id.toString()] = c;
+    });
+
+    // Get student info with user details
+    const studentIds = [...new Set(results.map(r => r.student.toString()))];
+    const students = await Student.find({ _id: { $in: studentIds } })
+      .populate('user', 'name email')
+      .select('studentId user');
+    const studentMap = {};
+    students.forEach(s => {
+      studentMap[s._id.toString()] = s;
+    });
+
+    // Format all results
+    const formattedResults = results.map(result => {
+      const course = courseMap[result.course.toString()];
+      const student = studentMap[result.student.toString()];
+      return {
+        _id: result._id,
+        student: student || { studentId: 'N/A', user: { name: 'Unknown' } },
+        course: course || { name: 'N/A', code: 'N/A', credits: 0 },
+        semester: result.semester,
+        marks: result.marks,
+        grade: result.grade,
+        gradePoint: result.gradePoint,
+        status: result.status,
+        remarks: result.remarks || '',
+        createdAt: result.createdAt,
+        updatedAt: result.updatedAt,
+      };
+    });
+
+    // SEARCH FILTER
+    let filteredResults = formattedResults;
+
+    if (search && search.trim()) {
+      const searchLower = search.toLowerCase().trim();
+      const searchTerms = searchLower
+        .split(' ')
+        .filter(term => term.length > 0);
+
+      filteredResults = formattedResults.filter(r => {
+        const searchableFields = [
+          (r.course?.name || '').toLowerCase(),
+          (r.course?.code || '').toLowerCase(),
+          (r.grade || '').toLowerCase(),
+          (r.status || '').toLowerCase(),
+          r.semester?.toString() || '',
+          r.marks?.toString() || '',
+          (r.remarks || '').toLowerCase(),
+          (r.student?.user?.name || '').toLowerCase(),
+          (r.student?.studentId || '').toLowerCase(),
+        ];
+
+        for (const field of searchableFields) {
+          for (const term of searchTerms) {
+            if (field.includes(term)) {
+              return true;
+            }
+          }
+        }
+        return false;
+      });
+
+      console.log(
+        `🔍 Filtered: ${filteredResults.length} out of ${formattedResults.length}`,
+      );
     }
 
     // Calculate summary
@@ -182,8 +214,6 @@ export const getResultsByStudent = async (req, res, next) => {
       }
     }
     const cgpa = totalCredits > 0 ? totalGradePoints / totalCredits : 0;
-
-    console.log('✅ Final results count:', filteredResults.length);
 
     res.status(200).json({
       success: true,
@@ -218,21 +248,22 @@ export const getResultsByCourse = async (req, res, next) => {
 
     const results = await Result.find(filter).sort({ marks: -1 });
 
-    // Student info আলাদাভাবে fetch
-    const formattedResults = [];
-    for (const result of results) {
-      try {
-        const student = await Student.findById(result.student).select(
-          'studentId',
-        );
-        formattedResults.push({
-          ...result._doc,
-          student: student || { studentId: 'N/A' },
-        });
-      } catch (err) {
-        formattedResults.push(result._doc);
-      }
-    }
+    const studentIds = [...new Set(results.map(r => r.student.toString()))];
+    const students = await Student.find({ _id: { $in: studentIds } })
+      .populate('user', 'name')
+      .select('studentId user');
+    const studentMap = {};
+    students.forEach(s => {
+      studentMap[s._id.toString()] = s;
+    });
+
+    const formattedResults = results.map(result => {
+      const student = studentMap[result.student.toString()];
+      return {
+        ...result._doc,
+        student: student || { studentId: 'N/A', user: { name: 'Unknown' } },
+      };
+    });
 
     console.log('✅ Results found:', formattedResults.length);
 
@@ -277,7 +308,6 @@ export const updateResult = async (req, res, next) => {
       { new: true, runValidators: true },
     );
 
-    // Update student CGPA
     await updateStudentCGPA(result.student);
 
     console.log('✅ Result updated:', updatedResult);
@@ -288,6 +318,188 @@ export const updateResult = async (req, res, next) => {
     });
   } catch (error) {
     console.error('❌ Update Result Error:', error);
+    next(error);
+  }
+};
+
+// @desc    Delete result
+// @route   DELETE /api/results/:id
+// @access  Private/Admin
+export const deleteResult = async (req, res, next) => {
+  try {
+    console.log('🗑️ Deleting result:', req.params.id);
+
+    const result = await Result.findById(req.params.id);
+    if (!result) {
+      return next(new AppError('Result not found', 404));
+    }
+
+    const studentId = result.student;
+    await result.deleteOne();
+
+    await updateStudentCGPA(studentId);
+
+    console.log('✅ Result deleted:', req.params.id);
+
+    res.status(200).json({
+      success: true,
+      message: 'Result deleted successfully',
+    });
+  } catch (error) {
+    console.error('❌ Delete Result Error:', error);
+    next(error);
+  }
+};
+
+// @desc    Get result statistics
+// @route   GET /api/results/stats
+// @access  Private/Admin
+export const getResultStats = async (req, res, next) => {
+  try {
+    console.log('📊 Getting result statistics');
+
+    const totalResults = await Result.countDocuments();
+    const passedResults = await Result.countDocuments({ status: 'passed' });
+    const failedResults = await Result.countDocuments({ status: 'failed' });
+
+    const gradeDistribution = await Result.aggregate([
+      {
+        $group: {
+          _id: '$grade',
+          count: { $sum: 1 },
+        },
+      },
+      {
+        $sort: { _id: 1 },
+      },
+    ]);
+
+    const semesterStats = await Result.aggregate([
+      {
+        $group: {
+          _id: '$semester',
+          count: { $sum: 1 },
+          avgMarks: { $avg: '$marks' },
+        },
+      },
+      {
+        $sort: { _id: 1 },
+      },
+    ]);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        totalResults,
+        passedResults,
+        failedResults,
+        passRate:
+          totalResults > 0
+            ? ((passedResults / totalResults) * 100).toFixed(2)
+            : 0,
+        gradeDistribution,
+        semesterStats,
+      },
+    });
+  } catch (error) {
+    console.error('❌ Get Result Stats Error:', error);
+    next(error);
+  }
+};
+
+// @desc    Get Result Dashboard Data
+// @route   GET /api/results/dashboard
+// @access  Private/Admin
+export const getResultDashboard = async (req, res, next) => {
+  try {
+    console.log('📊 Getting Result Dashboard...');
+
+    const totalResults = await Result.countDocuments();
+    const passedResults = await Result.countDocuments({ status: 'passed' });
+    const failedResults = await Result.countDocuments({ status: 'failed' });
+    const passRate =
+      totalResults > 0 ? ((passedResults / totalResults) * 100).toFixed(1) : 0;
+
+    const gradeDistribution = await Result.aggregate([
+      { $group: { _id: '$grade', count: { $sum: 1 } } },
+      { $sort: { _id: 1 } },
+    ]);
+
+    const deptPerformance = await Result.aggregate([
+      {
+        $lookup: {
+          from: 'courses',
+          localField: 'course',
+          foreignField: '_id',
+          as: 'courseData',
+        },
+      },
+      { $unwind: '$courseData' },
+      {
+        $lookup: {
+          from: 'departments',
+          localField: 'courseData.department',
+          foreignField: '_id',
+          as: 'deptData',
+        },
+      },
+      { $unwind: '$deptData' },
+      {
+        $group: {
+          _id: '$deptData.code',
+          deptName: { $first: '$deptData.name' },
+          total: { $sum: 1 },
+          passed: { $sum: { $cond: [{ $eq: ['$status', 'passed'] }, 1, 0] } },
+          avgMarks: { $avg: '$marks' },
+        },
+      },
+      {
+        $project: {
+          deptName: 1,
+          total: 1,
+          passed: 1,
+          failed: { $subtract: ['$total', '$passed'] },
+          avgMarks: { $round: ['$avgMarks', 1] },
+          passRate: { $multiply: [{ $divide: ['$passed', '$total'] }, 100] },
+        },
+      },
+    ]);
+
+    const recentResults = await Result.find()
+      .sort({ createdAt: -1 })
+      .limit(10)
+      .populate('student', 'studentId')
+      .populate('course', 'name code');
+
+    const semesterStats = await Result.aggregate([
+      {
+        $group: {
+          _id: '$semester',
+          count: { $sum: 1 },
+          avgMarks: { $avg: '$marks' },
+          passed: { $sum: { $cond: [{ $eq: ['$status', 'passed'] }, 1, 0] } },
+        },
+      },
+      { $sort: { _id: 1 } },
+    ]);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        summary: {
+          totalResults,
+          passedResults,
+          failedResults,
+          passRate: parseFloat(passRate),
+        },
+        gradeDistribution,
+        deptPerformance,
+        recentResults,
+        semesterStats,
+      },
+    });
+  } catch (error) {
+    console.error('❌ Dashboard Error:', error);
     next(error);
   }
 };

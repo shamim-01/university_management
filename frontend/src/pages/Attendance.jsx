@@ -79,20 +79,34 @@ const Attendance = () => {
       console.log('📥 Fetching attendance for course:', selectedCourse);
 
       const response = await api.get(`/attendance/course/${selectedCourse}`);
-      const attendance = response.data?.data || [];
+      console.log('📥 Response:', response.data);
+
+      // ✅ Fix: সঠিকভাবে Data Parse করুন
+      const data = response.data?.data || {};
+      const attendance = data.attendance || [];
+      const course = data.course || {};
+
       console.log('✅ Attendance loaded:', attendance.length);
+      console.log('✅ Course info:', course);
 
-      setAttendanceData(attendance);
+      // ✅ attendanceData array হিসেবে Set করুন
+      setAttendanceData(Array.isArray(attendance) ? attendance : []);
 
-      const present = attendance.filter(a => a.status === 'present').length;
-      const absent = attendance.filter(a => a.status === 'absent').length;
-      const late = attendance.filter(a => a.status === 'late').length;
+      const present = Array.isArray(attendance)
+        ? attendance.filter(a => a.status === 'present').length
+        : 0;
+      const absent = Array.isArray(attendance)
+        ? attendance.filter(a => a.status === 'absent').length
+        : 0;
+      const late = Array.isArray(attendance)
+        ? attendance.filter(a => a.status === 'late').length
+        : 0;
 
       setStats({
         present,
         absent,
         late,
-        total: attendance.length || students.length,
+        total: Array.isArray(attendance) ? attendance.length : students.length,
       });
     } catch (err) {
       console.error('Failed to fetch attendance:', err);
@@ -135,6 +149,8 @@ const Attendance = () => {
 
       console.log('📝 Marking attendance:', attendanceData);
       await api.post('/attendance', attendanceData);
+
+      // Refresh attendance
       await fetchAttendance();
       alert('✅ Attendance marked successfully!');
     } catch (err) {
@@ -264,7 +280,7 @@ const Attendance = () => {
               flexWrap: 'wrap',
             }}
           >
-            {/* Fixed: White text issue - Added proper styling */}
+            {/* Course Select */}
             <div
               style={{
                 display: 'flex',
@@ -312,6 +328,7 @@ const Attendance = () => {
               </select>
             </div>
 
+            {/* Date Select */}
             <div
               style={{
                 display: 'flex',
@@ -635,11 +652,14 @@ const Attendance = () => {
             <tbody>
               {filteredStudents.length > 0 ? (
                 filteredStudents.map((student, index) => {
-                  const attendance = attendanceData.find(
-                    a =>
-                      a.student?._id === student._id ||
-                      a.student === student._id,
-                  );
+                  // ✅ Find attendance - সঠিকভাবে Check করুন
+                  const attendance = Array.isArray(attendanceData)
+                    ? attendanceData.find(
+                        a =>
+                          a.student?._id === student._id ||
+                          a.student === student._id,
+                      )
+                    : null;
 
                   return (
                     <tr
