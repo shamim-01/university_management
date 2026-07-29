@@ -268,7 +268,7 @@ university-management-system/
 | Service | URL |
 |---------|-----|
 | **Frontend** | [https://university-management-ruddy.vercel.app](https://university-management-ruddy.vercel.app) |
-| **Backend** | [https://university-management-ttvo.onrender.com](https://university-management-ttvo.onrender.com) |
+| **Backend** | [https://university-management-1tvo.onrender.com](https://university-management-1tvo.onrender.com) |
 
 ---
 
