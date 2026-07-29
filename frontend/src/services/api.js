@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-// ✅ Dynamic API URL - Environment based
+// Dynamic API URL - Environment based
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 console.log('🔗 API URL:', API_URL);
@@ -10,7 +10,7 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 30000, // 30 seconds timeout
+  timeout: 30000,
 });
 
 // Request interceptor - Add token

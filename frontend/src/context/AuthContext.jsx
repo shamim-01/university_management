@@ -1,6 +1,6 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+// context/AuthContext.jsx
+import { createContext, useContext, useState, useEffect } from 'react';
 import api from '../services/api';
-import toast from 'react-hot-toast';
 
 const AuthContext = createContext();
 
@@ -13,55 +13,73 @@ export const AuthProvider = ({ children }) => {
     const userData = localStorage.getItem('user');
 
     if (token && userData) {
-      setUser(JSON.parse(userData));
+      try {
+        const parsedUser = JSON.parse(userData);
+        console.log('✅ User loaded from localStorage:', parsedUser);
+        setUser(parsedUser);
+      } catch (e) {
+        console.error('❌ Error parsing user data:', e);
+        localStorage.removeItem('user');
+        localStorage.removeItem('token');
+      }
     }
     setLoading(false);
   }, []);
 
-  const login = (userData, token) => {
-    localStorage.setItem('token', token);
-    localStorage.setItem('user', JSON.stringify(userData));
-    setUser(userData);
+  const login = async (email, password) => {
+    try {
+      const response = await api.post('/auth/login', { email, password });
+      console.log('✅ Login Response:', response.data);
+
+      if (response.data.success) {
+        const { token, user } = response.data.data;
+        console.log('✅ User Role:', user.role);
+
+        localStorage.setItem('token', token);
+        localStorage.setItem('user', JSON.stringify(user));
+        setUser(user);
+
+        return { success: true, user };
+      }
+      return { success: false, error: 'Login failed' };
+    } catch (error) {
+      console.error('❌ Login Error:', error);
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Login failed',
+      };
+    }
   };
 
   const logout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setUser(null);
-    toast.success('Logged out successfully');
   };
 
-  // Update Profile - Student/Teacher/Admin 
   const updateProfile = async data => {
     try {
-      const response = await api.put('/auth/profile', data);
-      const updatedUser = response.data.data;
-
-      // Update localStorage and state
-      localStorage.setItem('user', JSON.stringify(updatedUser));
-      setUser(updatedUser);
-
-      toast.success('Profile updated successfully!');
-      return { success: true, data: updatedUser };
+      const response = await api.put('/users/profile', data);
+      if (response.data.success) {
+        const updatedUser = { ...user, ...data };
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+        setUser(updatedUser);
+        return { success: true };
+      }
+      return { success: false };
     } catch (error) {
-      const message =
-        error.response?.data?.message || 'Failed to update profile';
-      toast.error(message);
-      return { success: false, error: message };
+      console.error('❌ Update Profile Error:', error);
+      return { success: false };
     }
   };
 
-  // Change Password - Student/Teacher/Admin 
   const changePassword = async data => {
     try {
-      await api.put('/auth/change-password', data);
-      toast.success('Password changed successfully!');
-      return { success: true };
+      const response = await api.post('/auth/change-password', data);
+      return { success: response.data.success };
     } catch (error) {
-      const message =
-        error.response?.data?.message || 'Failed to change password';
-      toast.error(message);
-      return { success: false, error: message };
+      console.error('❌ Change Password Error:', error);
+      return { success: false };
     }
   };
 
@@ -76,12 +94,11 @@ export const AuthProvider = ({ children }) => {
         loading,
         login,
         logout,
-        updateProfile, 
-        changePassword, 
+        updateProfile,
+        changePassword,
         isAdmin,
         isTeacher,
         isStudent,
-        role: user?.role,
       }}
     >
       {children}
