@@ -138,8 +138,9 @@ university-management-system/
 │   └── package.json
 ├── frontend/
 │   ├── src/
-│   │   ├── components/     # Reusable components
-│   │   │   ├── Layout/
+|   |   ├──layout
+│   │   │   ├── Layout.jsx   
+│   │   ├── pages/     # Reusable components
 │   │   │   ├── Dashboard.jsx
 │   │   │   ├── Students.jsx
 │   │   │   ├── Teachers.jsx
