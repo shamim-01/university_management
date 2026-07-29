@@ -33,6 +33,18 @@ const userSchema = new mongoose.Schema(
     phoneNumber: {
       type: String,
       trim: true,
+      default: '',
+    },
+    bio: {
+      type: String,
+      default: '',
+      trim: true,
+      maxlength: [500, 'Bio cannot be more than 500 characters'],
+    },
+    department: {
+      type: String,
+      trim: true,
+      default: '',
     },
     isActive: {
       type: Boolean,
@@ -40,6 +52,7 @@ const userSchema = new mongoose.Schema(
     },
     lastLogin: {
       type: Date,
+      default: null,
     },
     passwordResetToken: String,
     passwordResetExpires: Date,
@@ -72,7 +85,25 @@ userSchema.virtual('profile').get(function () {
     role: this.role,
     avatar: this.avatar,
     phoneNumber: this.phoneNumber,
+    bio: this.bio,
+    department: this.department,
+    isActive: this.isActive,
+    lastLogin: this.lastLogin,
+    createdAt: this.createdAt,
+    updatedAt: this.updatedAt,
   };
+});
+
+// ✅ Remove password from all queries by default
+userSchema.set('toJSON', {
+  transform: function (doc, ret) {
+    delete ret.password;
+    delete ret.passwordResetToken;
+    delete ret.passwordResetExpires;
+    delete ret.refreshToken;
+    delete ret.__v;
+    return ret;
+  },
 });
 
 const User = mongoose.model('User', userSchema);
