@@ -1,6 +1,20 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
+import {
+  UserGroupIcon,
+  AcademicCapIcon,
+  BookOpenIcon,
+  BuildingLibraryIcon,
+  SparklesIcon,
+  ArrowPathIcon,
+  CalendarIcon,
+  ClockIcon,
+  ChartBarIcon,
+  TrophyIcon,
+  UserPlusIcon,
+  CheckCircleIcon,
+} from '@heroicons/react/24/outline';
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -11,14 +25,14 @@ const Dashboard = () => {
     departments: 0,
   });
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
 
-  // Fetch Real Data
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = async (showRefresh = false) => {
     try {
-      console.log('📥 1. Fetching dashboard data...');
+      if (showRefresh) setRefreshing(true);
+      else setLoading(true);
 
-      // Parallel API calls
       const [studentsRes, teachersRes, coursesRes, departmentsRes] =
         await Promise.all([
           api.get('/students'),
@@ -27,12 +41,6 @@ const Dashboard = () => {
           api.get('/departments'),
         ]);
 
-      console.log('📥 2. Students:', studentsRes.data);
-      console.log('📥 3. Teachers:', teachersRes.data);
-      console.log('📥 4. Courses:', coursesRes.data);
-      console.log('📥 5. Departments:', departmentsRes.data);
-
-      // Extract data
       const students =
         studentsRes.data?.data || studentsRes.data?.students || [];
       const teachers =
@@ -46,18 +54,13 @@ const Dashboard = () => {
         courses: courses.length,
         departments: departments.length,
       });
-
-      console.log('✅ 6. Stats updated:', {
-        students: students.length,
-        teachers: teachers.length,
-        courses: courses.length,
-        departments: departments.length,
-      });
+      setError('');
     } catch (err) {
-      console.error('❌ 7. Error fetching dashboard data:', err);
+      console.error('Error fetching dashboard data:', err);
       setError('Failed to load dashboard data');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -65,534 +68,346 @@ const Dashboard = () => {
     fetchDashboardData();
   }, []);
 
-  // ---- Design-only helpers ----
-  const ICONS = {
-    students: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-        <path d="M12 3L1 9l11 6 9-4.91V17h2V9L12 3z" fill="currentColor" />
-        <path
-          d="M5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z"
-          fill="currentColor"
-          opacity="0.6"
-        />
-      </svg>
-    ),
-    teachers: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-        <circle cx="12" cy="8" r="4" fill="currentColor" />
-        <path
-          d="M4 20c0-4.4 3.6-7 8-7s8 2.6 8 7"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          fill="none"
-        />
-      </svg>
-    ),
-    courses: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-        <path
-          d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5v-15z"
-          stroke="currentColor"
-          strokeWidth="2"
-          fill="none"
-          strokeLinejoin="round"
-        />
-        <path
-          d="M4 5.5A2.5 2.5 0 0 0 6.5 8H20"
-          stroke="currentColor"
-          strokeWidth="2"
-          fill="none"
-        />
-      </svg>
-    ),
-    departments: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-        <path
-          d="M4 21V8l8-5 8 5v13"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinejoin="round"
-          fill="none"
-        />
-        <path
-          d="M9 21v-6h6v6"
-          stroke="currentColor"
-          strokeWidth="2"
-          fill="none"
-        />
-      </svg>
-    ),
-  };
-
   const statItems = [
     {
       key: 'students',
       label: 'Total Students',
       value: stats.students,
-      accent: '#60a5fa',
-      gradient: 'linear-gradient(135deg, #3b82f6, #2563eb)',
-      glow: 'rgba(59, 130, 246, 0.35)',
+      icon: UserGroupIcon,
+      bg: 'from-blue-500/20 via-blue-500/10 to-transparent',
+      border: 'border-blue-500/30',
+      iconBg: 'bg-blue-500/30',
+      iconColor: 'text-blue-400',
+      textColor: 'text-white',
+      change: '+12%',
+      gradient: 'from-blue-500 to-cyan-400',
     },
     {
       key: 'teachers',
       label: 'Total Teachers',
       value: stats.teachers,
-      accent: '#4ade80',
-      gradient: 'linear-gradient(135deg, #22c55e, #16a34a)',
-      glow: 'rgba(34, 197, 94, 0.35)',
+      icon: AcademicCapIcon,
+      bg: 'from-emerald-500/20 via-emerald-500/10 to-transparent',
+      border: 'border-emerald-500/30',
+      iconBg: 'bg-emerald-500/30',
+      iconColor: 'text-emerald-400',
+      textColor: 'text-white',
+      change: '+8%',
+      gradient: 'from-emerald-500 to-teal-400',
     },
     {
       key: 'courses',
       label: 'Total Courses',
       value: stats.courses,
-      accent: '#c084fc',
-      gradient: 'linear-gradient(135deg, #a855f7, #9333ea)',
-      glow: 'rgba(168, 85, 247, 0.35)',
+      icon: BookOpenIcon,
+      bg: 'from-purple-500/20 via-purple-500/10 to-transparent',
+      border: 'border-purple-500/30',
+      iconBg: 'bg-purple-500/30',
+      iconColor: 'text-purple-400',
+      textColor: 'text-white',
+      change: '+5%',
+      gradient: 'from-purple-500 to-pink-400',
     },
     {
       key: 'departments',
       label: 'Departments',
       value: stats.departments,
-      accent: '#fb923c',
-      gradient: 'linear-gradient(135deg, #f97316, #ea580c)',
-      glow: 'rgba(249, 115, 22, 0.35)',
+      icon: BuildingLibraryIcon,
+      bg: 'from-orange-500/20 via-orange-500/10 to-transparent',
+      border: 'border-orange-500/30',
+      iconBg: 'bg-orange-500/30',
+      iconColor: 'text-orange-400',
+      textColor: 'text-white',
+      change: '+3%',
+      gradient: 'from-orange-500 to-red-400',
     },
   ];
 
-  const glassCard = {
-    background: 'rgba(255, 255, 255, 0.05)',
-    backdropFilter: 'blur(20px)',
-    WebkitBackdropFilter: 'blur(20px)',
-    borderRadius: '1rem',
-    border: '1px solid rgba(255, 255, 255, 0.08)',
-  };
+  const activities = [
+    {
+      title: 'New student registered',
+      time: '2 minutes ago',
+      icon: '🎓',
+      color: 'from-blue-500/20 to-blue-500/5',
+    },
+    {
+      title: 'Course updated: CSE401',
+      time: '15 minutes ago',
+      icon: '📚',
+      color: 'from-purple-500/20 to-purple-500/5',
+    },
+    {
+      title: 'Attendance marked for 30 students',
+      time: '1 hour ago',
+      icon: '✅',
+      color: 'from-emerald-500/20 to-emerald-500/5',
+    },
+    {
+      title: 'New teacher joined the faculty',
+      time: '3 hours ago',
+      icon: '👨‍🏫',
+      color: 'from-pink-500/20 to-pink-500/5',
+    },
+  ];
+
+  const events = [
+    {
+      title: 'Semester Final Exam',
+      date: 'Jan 21',
+      time: '10:00 AM - 1:00 PM',
+      color: 'from-purple-500 to-pink-500',
+      day: '21',
+    },
+    {
+      title: 'Faculty Meeting',
+      date: 'Jan 22',
+      time: '3:00 PM - 5:00 PM',
+      color: 'from-blue-500 to-cyan-500',
+      day: '22',
+    },
+    {
+      title: 'Results Publication',
+      date: 'Jan 23',
+      time: '12:00 PM',
+      color: 'from-emerald-500 to-teal-500',
+      day: '23',
+    },
+  ];
 
   if (loading) {
     return (
-      <div style={{ padding: '1.5rem' }}>
-        <div
-          style={{
-            height: '2.5rem',
-            width: '16rem',
-            borderRadius: '0.5rem',
-            marginBottom: '2rem',
-          }}
-          className="skeleton-pulse"
-        />
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-            gap: '1.5rem',
-          }}
-        >
-          {[1, 2, 3, 4].map(i => (
-            <div
-              key={i}
-              style={{ ...glassCard, padding: '1.5rem', height: '7.5rem' }}
-              className="skeleton-pulse"
-            />
-          ))}
+      <div className="flex items-center justify-center min-h-[70vh]">
+        <div className="text-center">
+          <div className="relative">
+            <div className="w-20 h-20 border-4 border-purple-500/20 border-t-purple-500 rounded-full animate-spin" />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <SparklesIcon className="w-8 h-8 text-purple-400/50 animate-pulse" />
+            </div>
+          </div>
+          <p className="text-gray-400 mt-4 font-medium text-lg">
+            Loading dashboard...
+          </p>
+          <p className="text-gray-500 text-sm mt-1">Please wait a moment</p>
         </div>
-        <style>{`
-          .skeleton-pulse {
-            background: linear-gradient(
-              90deg,
-              rgba(255,255,255,0.04) 25%,
-              rgba(255,255,255,0.09) 37%,
-              rgba(255,255,255,0.04) 63%
-            );
-            background-size: 400% 100%;
-            animation: skeleton-shimmer 1.4s ease infinite;
-          }
-          @keyframes skeleton-shimmer {
-            0% { background-position: 100% 50%; }
-            100% { background-position: 0 50%; }
-          }
-        `}</style>
       </div>
     );
   }
 
   return (
-    <div style={{ padding: '1.5rem' }}>
-      <style>{`
-        .stat-card {
-          position: relative;
-          overflow: hidden;
-          transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
-        }
-        .stat-card:hover {
-          transform: translateY(-3px);
-        }
-        .activity-row, .event-row {
-          transition: background 0.2s ease, transform 0.2s ease;
-        }
-        .activity-row:hover, .event-row:hover {
-          background: rgba(255, 255, 255, 0.05);
-          transform: translateX(2px);
-        }
-      `}</style>
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-900 to-black p-4 md:p-6">
+      <div className="max-w-7xl mx-auto">
+        {/* Header with Decorative Elements */}
+        <div className="relative mb-12">
+          <div className="absolute -top-24 -right-24 w-80 h-80 bg-purple-500/10 rounded-full blur-3xl" />
+          <div className="absolute -bottom-24 -left-24 w-80 h-80 bg-pink-500/10 rounded-full blur-3xl" />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-purple-500/5 rounded-full blur-3xl" />
 
-      {/* Header */}
-      <div
-        style={{
-          marginBottom: '2rem',
-          display: 'flex',
-          alignItems: 'flex-start',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: '0.75rem',
-        }}
-      >
-        <div>
-          <h1
-            style={{
-              fontSize: '1.875rem',
-              fontWeight: '700',
-              color: 'white',
-              letterSpacing: '-0.02em',
-              margin: 0,
-            }}
-          >
-            Welcome back, {user?.name || 'Admin'}{' '}
-            <span aria-hidden="true">👋</span>
-          </h1>
-          <p
-            style={{
-              color: '#9ca3af',
-              marginTop: '0.375rem',
-              fontSize: '0.9375rem',
-            }}
-          >
-            Here's what's happening with your university today.
-          </p>
-          {error && (
-            <p
-              style={{
-                color: '#f87171',
-                fontSize: '0.875rem',
-                marginTop: '0.5rem',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.375rem',
-              }}
-            >
-              <span
-                style={{
-                  width: '0.375rem',
-                  height: '0.375rem',
-                  borderRadius: '9999px',
-                  background: '#f87171',
-                  display: 'inline-block',
-                }}
-              />
-              {error}
-            </p>
-          )}
-        </div>
-      </div>
-
-      {/* Stats Grid */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-          gap: '1.25rem',
-          marginBottom: '1.75rem',
-        }}
-      >
-        {statItems.map(stat => (
-          <div
-            key={stat.key}
-            className="stat-card"
-            style={{
-              ...glassCard,
-              padding: '1.5rem',
-            }}
-            onMouseEnter={e => {
-              e.currentTarget.style.borderColor = stat.glow;
-              e.currentTarget.style.boxShadow = `0 12px 30px -12px ${stat.glow}`;
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.08)';
-              e.currentTarget.style.boxShadow = 'none';
-            }}
-          >
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                marginBottom: '1rem',
-              }}
-            >
-              <div
-                style={{
-                  width: '2.75rem',
-                  height: '2.75rem',
-                  borderRadius: '0.75rem',
-                  background: stat.gradient,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: 'white',
-                  boxShadow: `0 6px 16px -6px ${stat.glow}`,
-                }}
-              >
-                {ICONS[stat.key]}
+          <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-3 mb-1">
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center shadow-lg shadow-purple-500/30">
+                  <SparklesIcon className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-purple-400 via-pink-400 to-purple-400 bg-clip-text text-transparent animate-gradient">
+                    Welcome back, {user?.name?.split(' ')[0] || 'Admin'} 👋
+                  </h1>
+                  <p className="text-gray-400 text-sm flex items-center gap-2 mt-0.5">
+                    <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />
+                    Here's what's happening with your university today
+                  </p>
+                </div>
               </div>
-              <span
-                style={{
-                  fontSize: '0.6875rem',
-                  fontWeight: '600',
-                  color: '#4ade80',
-                  background: 'rgba(74, 222, 128, 0.12)',
-                  padding: '0.25rem 0.5rem',
-                  borderRadius: '9999px',
-                  letterSpacing: '0.02em',
-                }}
+              {error && (
+                <p className="text-red-400 text-sm mt-2 flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 bg-red-400 rounded-full" />
+                  {error}
+                </p>
+              )}
+            </div>
+
+            <div className="flex items-center gap-3">
+              <div className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 rounded-full border border-emerald-500/20">
+                <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
+                <span className="text-emerald-400 text-xs font-medium">
+                  Live
+                </span>
+              </div>
+              <button
+                onClick={() => fetchDashboardData(true)}
+                disabled={refreshing}
+                className="flex items-center gap-2 px-4 py-2.5 bg-white/5 hover:bg-white/10 rounded-xl text-gray-300 hover:text-white transition-all duration-200 border border-white/10 hover:border-white/20 disabled:opacity-50 backdrop-blur-sm"
               >
-                ● Live
+                <ArrowPathIcon
+                  className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`}
+                />
+                {refreshing ? 'Refreshing...' : 'Refresh'}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Stats Grid with Enhanced Design */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-5 mb-10">
+          {statItems.map(stat => (
+            <div
+              key={stat.key}
+              className={`group relative bg-gradient-to-br ${stat.bg} rounded-2xl p-6 border ${stat.border} hover:scale-[1.03] hover:shadow-2xl transition-all duration-300 overflow-hidden`}
+            >
+              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br ${stat.gradient} opacity-5 rounded-full blur-2xl -mr-16 -mt-16" />
+              <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-br ${stat.gradient} opacity-5 rounded-full blur-2xl -ml-12 -mb-12" />
+
+              <div className="relative flex items-start justify-between">
+                <div>
+                  <p className="text-gray-400 text-xs uppercase tracking-wider font-medium">
+                    {stat.label}
+                  </p>
+                  <p
+                    className={`text-3xl font-bold ${stat.textColor} mt-1 tracking-tight`}
+                  >
+                    {stat.value.toLocaleString()}
+                  </p>
+                </div>
+                <div
+                  className={`p-3 rounded-xl ${stat.iconBg} group-hover:scale-110 group-hover:rotate-6 transition-all duration-300`}
+                >
+                  <stat.icon className={`w-5 h-5 ${stat.iconColor}`} />
+                </div>
+              </div>
+              <div className="relative mt-3 flex items-center gap-1.5 text-emerald-400 text-xs font-medium">
+                <span className="text-base">📈</span>
+                <span>{stat.change} from last month</span>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Activities & Events Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Recent Activities */}
+          <div className="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 overflow-hidden shadow-lg shadow-purple-500/5 hover:shadow-purple-500/10 transition-shadow duration-300">
+            <div className="px-6 py-4 border-b border-white/5 flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+                <ClockIcon className="w-5 h-5 text-purple-400" />
+                Recent Activities
+              </h2>
+              <span className="text-gray-500 text-xs bg-white/5 px-3 py-1 rounded-full">
+                Last 24h
               </span>
             </div>
-            <p
-              style={{
-                color: '#9ca3af',
-                fontSize: '0.8125rem',
-                fontWeight: '500',
-                textTransform: 'uppercase',
-                letterSpacing: '0.04em',
-              }}
-            >
-              {stat.label}
-            </p>
-            <p
-              style={{
-                fontSize: '2.25rem',
-                fontWeight: '700',
-                color: 'white',
-                marginTop: '0.25rem',
-                fontVariantNumeric: 'tabular-nums',
-                letterSpacing: '-0.02em',
-              }}
-            >
-              {stat.value.toLocaleString()}
-            </p>
-          </div>
-        ))}
-      </div>
-
-      {/* Recent Activities & Upcoming Events */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-          gap: '1.25rem',
-        }}
-      >
-        <div style={{ ...glassCard, padding: '1.5rem' }}>
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              marginBottom: '1.25rem',
-            }}
-          >
-            <h2
-              style={{
-                fontSize: '1.0625rem',
-                fontWeight: '600',
-                color: 'white',
-                margin: 0,
-              }}
-            >
-              Recent Activities
-            </h2>
-            <span style={{ color: '#6b7280', fontSize: '0.75rem' }}>
-              Last 24h
-            </span>
-          </div>
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '0.375rem',
-            }}
-          >
-            {[1, 2, 3, 4].map(i => (
-              <div
-                key={i}
-                className="activity-row"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.75rem',
-                  padding: '0.625rem 0.75rem',
-                  borderRadius: '0.625rem',
-                }}
-              >
+            <div className="p-4 space-y-2">
+              {activities.map((activity, index) => (
                 <div
-                  style={{
-                    width: '2.5rem',
-                    height: '2.5rem',
-                    minWidth: '2.5rem',
-                    borderRadius: '9999px',
-                    background:
-                      'linear-gradient(135deg, rgba(139,92,246,0.35), rgba(139,92,246,0.12))',
-                    border: '1px solid rgba(139, 92, 246, 0.3)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
+                  key={index}
+                  className={`group flex items-center gap-3 p-3 bg-gradient-to-r ${activity.color} hover:bg-white/10 rounded-xl transition-all duration-200 cursor-default`}
                 >
-                  <span
-                    style={{
-                      color: '#c4b5fd',
-                      fontSize: '0.6875rem',
-                      fontWeight: 'bold',
-                    }}
-                  >
-                    U
-                  </span>
+                  <div className="w-11 h-11 rounded-full bg-gradient-to-r from-purple-500/20 to-pink-500/20 flex items-center justify-center flex-shrink-0 text-xl border border-white/5">
+                    {activity.icon}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-white font-medium group-hover:text-purple-400 transition-colors duration-200 text-sm">
+                      {activity.title}
+                    </p>
+                    <p className="text-gray-500 text-xs flex items-center gap-1">
+                      <ClockIcon className="w-3 h-3" />
+                      {activity.time}
+                    </p>
+                  </div>
+                  <div className="w-1.5 h-1.5 rounded-full bg-purple-400/30 group-hover:bg-purple-400 transition-colors duration-200" />
                 </div>
-                <div style={{ minWidth: 0 }}>
-                  <p
-                    style={{
-                      color: 'white',
-                      fontSize: '0.875rem',
-                      fontWeight: '500',
-                      margin: 0,
-                    }}
+              ))}
+            </div>
+          </div>
+
+          {/* Upcoming Events */}
+          <div className="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 overflow-hidden shadow-lg shadow-purple-500/5 hover:shadow-purple-500/10 transition-shadow duration-300">
+            <div className="px-6 py-4 border-b border-white/5 flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+                <CalendarIcon className="w-5 h-5 text-pink-400" />
+                Upcoming Events
+              </h2>
+              <span className="text-gray-500 text-xs bg-white/5 px-3 py-1 rounded-full">
+                This month
+              </span>
+            </div>
+            <div className="p-4 space-y-3">
+              {events.map((event, index) => (
+                <div
+                  key={index}
+                  className="group flex items-center gap-3 p-3 bg-white/5 hover:bg-white/10 rounded-xl transition-all duration-200 cursor-default"
+                >
+                  <div
+                    className={`w-14 h-14 rounded-xl bg-gradient-to-br ${event.color} flex flex-col items-center justify-center text-white flex-shrink-0 shadow-lg shadow-purple-500/20`}
                   >
-                    New student registered
-                  </p>
-                  <p
-                    style={{
-                      color: '#6b7280',
-                      fontSize: '0.75rem',
-                      margin: '0.125rem 0 0',
-                    }}
-                  >
-                    {i * 2} minutes ago
-                  </p>
+                    <span className="text-[9px] font-bold uppercase tracking-wider opacity-80">
+                      JAN
+                    </span>
+                    <span className="text-xl font-bold leading-none">
+                      {event.day}
+                    </span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-white font-medium group-hover:text-purple-400 transition-colors duration-200 text-sm">
+                      {event.title}
+                    </p>
+                    <p className="text-gray-500 text-xs flex items-center gap-1">
+                      <ClockIcon className="w-3 h-3" />
+                      {event.time}
+                    </p>
+                  </div>
+                  <div className="w-1.5 h-1.5 rounded-full bg-pink-400/30 group-hover:bg-pink-400 transition-colors duration-200" />
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
 
-        <div style={{ ...glassCard, padding: '1.5rem' }}>
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              marginBottom: '1.25rem',
-            }}
-          >
-            <h2
-              style={{
-                fontSize: '1.0625rem',
-                fontWeight: '600',
-                color: 'white',
-                margin: 0,
-              }}
-            >
-              Upcoming Events
-            </h2>
-            <span style={{ color: '#6b7280', fontSize: '0.75rem' }}>
-              This month
+        {/* Footer Stats */}
+        <div className="mt-8 flex flex-wrap items-center justify-between gap-3 text-gray-400 text-sm bg-white/5 rounded-xl px-5 py-3.5 border border-white/5">
+          <div className="flex items-center gap-2">
+            <SparklesIcon className="w-4 h-4 text-purple-400" />
+            <p>
+              Last updated:{' '}
+              <span className="text-white font-medium">
+                {new Date().toLocaleString()}
+              </span>
+            </p>
+          </div>
+          <div className="flex items-center gap-6">
+            <span className="flex items-center gap-2 text-purple-400">
+              <UserGroupIcon className="w-4 h-4" />
+              Total:{' '}
+              <span className="text-white font-medium">
+                {stats.students + stats.teachers}
+              </span>
+            </span>
+            <span className="flex items-center gap-2 text-emerald-400">
+              <BookOpenIcon className="w-4 h-4" />
+              Courses:{' '}
+              <span className="text-white font-medium">{stats.courses}</span>
+            </span>
+            <span className="flex items-center gap-2 text-orange-400">
+              <BuildingLibraryIcon className="w-4 h-4" />
+              Depts:{' '}
+              <span className="text-white font-medium">
+                {stats.departments}
+              </span>
             </span>
           </div>
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '0.375rem',
-            }}
-          >
-            {[1, 2, 3].map(i => (
-              <div
-                key={i}
-                className="event-row"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.75rem',
-                  padding: '0.625rem 0.75rem',
-                  borderRadius: '0.625rem',
-                }}
-              >
-                <div
-                  style={{
-                    width: '3.25rem',
-                    height: '3.25rem',
-                    minWidth: '3.25rem',
-                    borderRadius: '0.75rem',
-                    background: 'linear-gradient(135deg, #8b5cf6, #ec4899)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: 'white',
-                    boxShadow: '0 6px 16px -6px rgba(139, 92, 246, 0.4)',
-                  }}
-                >
-                  <span
-                    style={{
-                      fontSize: '0.5625rem',
-                      fontWeight: 'bold',
-                      letterSpacing: '0.04em',
-                    }}
-                  >
-                    JAN
-                  </span>
-                  <span
-                    style={{
-                      fontSize: '1.0625rem',
-                      fontWeight: 'bold',
-                      lineHeight: 1,
-                    }}
-                  >
-                    {20 + i}
-                  </span>
-                </div>
-                <div style={{ minWidth: 0 }}>
-                  <p
-                    style={{
-                      color: 'white',
-                      fontSize: '0.875rem',
-                      fontWeight: '500',
-                      margin: 0,
-                    }}
-                  >
-                    {i === 1
-                      ? 'Semester Final Exam'
-                      : i === 2
-                        ? 'Faculty Meeting'
-                        : 'Results Publication'}
-                  </p>
-                  <p
-                    style={{
-                      color: '#6b7280',
-                      fontSize: '0.75rem',
-                      margin: '0.125rem 0 0',
-                    }}
-                  >
-                    {i === 1
-                      ? '10:00 AM - 1:00 PM'
-                      : i === 2
-                        ? '3:00 PM - 5:00 PM'
-                        : '12:00 PM'}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
         </div>
+
+        {/* CSS */}
+        <style>{`
+          @keyframes gradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+          }
+          .animate-gradient {
+            background-size: 200% auto;
+            animation: gradient 3s ease infinite;
+          }
+        `}</style>
       </div>
     </div>
   );

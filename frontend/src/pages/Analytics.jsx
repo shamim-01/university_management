@@ -9,7 +9,6 @@ import {
   BookOpenIcon,
   SparklesIcon,
   ArrowPathIcon,
-  TrendingUpIcon,
 } from '@heroicons/react/24/outline';
 
 const Analytics = () => {
@@ -113,7 +112,6 @@ const Analytics = () => {
       value: stats.totalStudents,
       icon: UsersIcon,
       change: '+12%',
-      trend: 'up',
       color: 'from-purple-500/10 to-purple-500/5',
       border: 'border-purple-500/20',
       iconBg: 'bg-purple-500/20',
@@ -125,7 +123,6 @@ const Analytics = () => {
       value: stats.totalTeachers,
       icon: AcademicCapIcon,
       change: '+8%',
-      trend: 'up',
       color: 'from-blue-500/10 to-blue-500/5',
       border: 'border-blue-500/20',
       iconBg: 'bg-blue-500/20',
@@ -137,7 +134,6 @@ const Analytics = () => {
       value: stats.totalCourses,
       icon: BookOpenIcon,
       change: '+5%',
-      trend: 'up',
       color: 'from-emerald-500/10 to-emerald-500/5',
       border: 'border-emerald-500/20',
       iconBg: 'bg-emerald-500/20',
@@ -149,7 +145,6 @@ const Analytics = () => {
       value: `${stats.attendanceRate}%`,
       icon: UserGroupIcon,
       change: '+3%',
-      trend: 'up',
       color: 'from-pink-500/10 to-pink-500/5',
       border: 'border-pink-500/20',
       iconBg: 'bg-pink-500/20',
@@ -252,7 +247,7 @@ const Analytics = () => {
                 </div>
               </div>
               <div className="mt-3 flex items-center gap-1.5 text-emerald-400 text-xs font-medium">
-                <TrendingUpIcon className="w-3.5 h-3.5" />
+                <span className="text-base">📈</span>
                 <span>{stat.change} from last month</span>
               </div>
             </div>
