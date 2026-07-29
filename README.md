@@ -1,3 +1,5 @@
+
+
 ```markdown
 # 🎓 University Management System
 
@@ -399,7 +401,7 @@ Authorization: Bearer <your_jwt_token>
 
 ## 📄 License
 
-MIT License © 2026
+MIT License © 2024
 
 ---
 
@@ -417,4 +419,9 @@ MIT License © 2026
 Made with ❤️ by [Shamim Alam](https://github.com/shamim-01)
 
 </div>
-```
+
+---
+
+## ✅ Done!
+
+এখন আপনার GitHub Repository তে README সুন্দরভাবে Render হবে! 🎉
