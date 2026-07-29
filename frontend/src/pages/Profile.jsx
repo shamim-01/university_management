@@ -23,13 +23,15 @@ const Profile = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+
+  // ✅ User Data থেকে Role নিন
   const [profile, setProfile] = useState({
     name: user?.name || 'User',
     email: user?.email || 'user@university.com',
-    role: user?.role || 'Student',
-    department: 'Computer Science',
-    phone: '+880 1234 567890',
-    bio: 'Passionate about learning and technology',
+    role: user?.role || 'Student', // ✅ Role সেট করুন
+    department: user?.department || 'Computer Science',
+    phone: user?.phone || '+880 1234 567890',
+    bio: user?.bio || 'Passionate about learning and technology',
     avatar: user?.avatar || '',
     joinDate: user?.createdAt || new Date().toISOString(),
   });
@@ -41,6 +43,32 @@ const Profile = () => {
     confirmPassword: '',
   });
   const [showPasswordForm, setShowPasswordForm] = useState(false);
+
+  // ✅ Role Change হলে Profile Update করুন
+  useEffect(() => {
+    if (user) {
+      setProfile({
+        name: user.name || 'User',
+        email: user.email || 'user@university.com',
+        role: user.role || 'Student',
+        department: user.department || 'Computer Science',
+        phone: user.phone || '+880 1234 567890',
+        bio: user.bio || 'Passionate about learning and technology',
+        avatar: user.avatar || '',
+        joinDate: user.createdAt || new Date().toISOString(),
+      });
+      setFormData({
+        name: user.name || 'User',
+        email: user.email || 'user@university.com',
+        role: user.role || 'Student',
+        department: user.department || 'Computer Science',
+        phone: user.phone || '+880 1234 567890',
+        bio: user.bio || 'Passionate about learning and technology',
+        avatar: user.avatar || '',
+        joinDate: user.createdAt || new Date().toISOString(),
+      });
+    }
+  }, [user]);
 
   const handleSave = async () => {
     setLoading(true);
@@ -115,6 +143,7 @@ const Profile = () => {
     setError('');
   };
 
+  // ✅ Role অনুযায়ী Color
   const getRoleColor = role => {
     switch (role?.toLowerCase()) {
       case 'admin':
@@ -128,6 +157,7 @@ const Profile = () => {
     }
   };
 
+  // ✅ Role অনুযায়ী Icon
   const getRoleIcon = role => {
     switch (role?.toLowerCase()) {
       case 'admin':
@@ -141,6 +171,7 @@ const Profile = () => {
     }
   };
 
+  // ✅ Role অনুযায়ী Gradient
   const getGradientColor = role => {
     switch (role?.toLowerCase()) {
       case 'admin':
@@ -151,6 +182,20 @@ const Profile = () => {
         return 'from-emerald-500 to-teal-500';
       default:
         return 'from-purple-500 to-pink-500';
+    }
+  };
+
+  // ✅ Role Label
+  const getRoleLabel = role => {
+    switch (role?.toLowerCase()) {
+      case 'admin':
+        return 'Administrator';
+      case 'teacher':
+        return 'Faculty Member';
+      case 'student':
+        return 'Student';
+      default:
+        return 'User';
     }
   };
 
@@ -190,7 +235,7 @@ const Profile = () => {
                   <div className="flex items-center gap-1 px-3 py-1 bg-purple-500/20 rounded-full border border-purple-500/20">
                     <SparklesIcon className="w-3.5 h-3.5 text-purple-400" />
                     <span className="text-purple-400 text-xs font-medium">
-                      {profile.role}
+                      {getRoleLabel(profile.role)}
                     </span>
                   </div>
                 </div>
@@ -247,7 +292,6 @@ const Profile = () => {
 
         {/* Profile Card */}
         <div className="relative bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 overflow-hidden shadow-2xl shadow-purple-500/5">
-          {/* Decorative elements */}
           <div className="absolute top-0 right-0 w-96 h-96 bg-purple-500/5 rounded-full blur-3xl -mr-48 -mt-48" />
           <div className="absolute bottom-0 left-0 w-96 h-96 bg-pink-500/5 rounded-full blur-3xl -ml-48 -mb-48" />
 
@@ -272,7 +316,9 @@ const Profile = () => {
                   <span
                     className={`px-3 py-1 rounded-full text-xs font-medium border ${getRoleColor(profile.role)}`}
                   >
-                    {getRoleIcon(profile.role)} {profile.role}
+                    {getRoleIcon(profile.role)}{' '}
+                    {profile.role.charAt(0).toUpperCase() +
+                      profile.role.slice(1)}
                   </span>
                   <span className="text-gray-500 text-xs flex items-center gap-1">
                     <CalendarIcon className="w-3.5 h-3.5" />
