@@ -1,5 +1,3 @@
-
-
 ```markdown
 # 🎓 University Management System
 
@@ -224,13 +222,8 @@ npm run dev
 | POST | `/api/auth/login` | Login user |
 | POST | `/api/auth/forgot-password` | Request password reset |
 | POST | `/api/auth/reset-password/:token` | Reset password |
+| PUT | `/api/users/profile` | Update profile |
 | PUT | `/api/auth/change-password` | Change password |
-
-### 👤 Users & Profile
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/users/profile` | Get user profile |
-| PUT | `/api/users/profile` | Update user profile |
 
 ### 👨‍🎓 Students
 | Method | Endpoint | Description |
@@ -401,7 +394,7 @@ Authorization: Bearer <your_jwt_token>
 
 ## 📄 License
 
-MIT License © 2024
+MIT License © 2026
 
 ---
 
@@ -419,9 +412,4 @@ MIT License © 2024
 Made with ❤️ by [Shamim Alam](https://github.com/shamim-01)
 
 </div>
-
----
-
-## ✅ Done!
-
-এখন আপনার GitHub Repository তে README সুন্দরভাবে Render হবে! 🎉
+```
