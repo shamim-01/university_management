@@ -1,4 +1,4 @@
-```markdown
+
 ## 🎓 University Management System
 
 <div align="center">
