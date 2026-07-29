@@ -11,7 +11,6 @@ import {
   CalendarIcon,
   ClockIcon,
   ChartBarIcon,
-  TrophyIcon,
   UserPlusIcon,
   CheckCircleIcon,
 } from '@heroicons/react/24/outline';
@@ -80,7 +79,6 @@ const Dashboard = () => {
       iconColor: 'text-blue-400',
       textColor: 'text-white',
       change: '+12%',
-      gradient: 'from-blue-500 to-cyan-400',
     },
     {
       key: 'teachers',
@@ -93,7 +91,6 @@ const Dashboard = () => {
       iconColor: 'text-emerald-400',
       textColor: 'text-white',
       change: '+8%',
-      gradient: 'from-emerald-500 to-teal-400',
     },
     {
       key: 'courses',
@@ -106,7 +103,6 @@ const Dashboard = () => {
       iconColor: 'text-purple-400',
       textColor: 'text-white',
       change: '+5%',
-      gradient: 'from-purple-500 to-pink-400',
     },
     {
       key: 'departments',
@@ -119,34 +115,21 @@ const Dashboard = () => {
       iconColor: 'text-orange-400',
       textColor: 'text-white',
       change: '+3%',
-      gradient: 'from-orange-500 to-red-400',
     },
   ];
 
   const activities = [
-    {
-      title: 'New student registered',
-      time: '2 minutes ago',
-      icon: '🎓',
-      color: 'from-blue-500/20 to-blue-500/5',
-    },
-    {
-      title: 'Course updated: CSE401',
-      time: '15 minutes ago',
-      icon: '📚',
-      color: 'from-purple-500/20 to-purple-500/5',
-    },
+    { title: 'New student registered', time: '2 minutes ago', icon: '🎓' },
+    { title: 'Course updated: CSE401', time: '15 minutes ago', icon: '📚' },
     {
       title: 'Attendance marked for 30 students',
       time: '1 hour ago',
       icon: '✅',
-      color: 'from-emerald-500/20 to-emerald-500/5',
     },
     {
       title: 'New teacher joined the faculty',
       time: '3 hours ago',
       icon: '👨‍🏫',
-      color: 'from-pink-500/20 to-pink-500/5',
     },
   ];
 
@@ -196,11 +179,10 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-900 to-black p-4 md:p-6">
       <div className="max-w-7xl mx-auto">
-        {/* Header with Decorative Elements */}
+        {/* Header */}
         <div className="relative mb-12">
           <div className="absolute -top-24 -right-24 w-80 h-80 bg-purple-500/10 rounded-full blur-3xl" />
           <div className="absolute -bottom-24 -left-24 w-80 h-80 bg-pink-500/10 rounded-full blur-3xl" />
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-purple-500/5 rounded-full blur-3xl" />
 
           <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
@@ -247,16 +229,13 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Stats Grid with Enhanced Design */}
+        {/* Stats Grid */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-5 mb-10">
           {statItems.map(stat => (
             <div
               key={stat.key}
               className={`group relative bg-gradient-to-br ${stat.bg} rounded-2xl p-6 border ${stat.border} hover:scale-[1.03] hover:shadow-2xl transition-all duration-300 overflow-hidden`}
             >
-              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br ${stat.gradient} opacity-5 rounded-full blur-2xl -mr-16 -mt-16" />
-              <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-br ${stat.gradient} opacity-5 rounded-full blur-2xl -ml-12 -mb-12" />
-
               <div className="relative flex items-start justify-between">
                 <div>
                   <p className="text-gray-400 text-xs uppercase tracking-wider font-medium">
@@ -282,10 +261,10 @@ const Dashboard = () => {
           ))}
         </div>
 
-        {/* Activities & Events Section */}
+        {/* Activities & Events */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Recent Activities */}
-          <div className="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 overflow-hidden shadow-lg shadow-purple-500/5 hover:shadow-purple-500/10 transition-shadow duration-300">
+          <div className="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 overflow-hidden">
             <div className="px-6 py-4 border-b border-white/5 flex items-center justify-between">
               <h2 className="text-lg font-semibold text-white flex items-center gap-2">
                 <ClockIcon className="w-5 h-5 text-purple-400" />
@@ -299,7 +278,7 @@ const Dashboard = () => {
               {activities.map((activity, index) => (
                 <div
                   key={index}
-                  className={`group flex items-center gap-3 p-3 bg-gradient-to-r ${activity.color} hover:bg-white/10 rounded-xl transition-all duration-200 cursor-default`}
+                  className="group flex items-center gap-3 p-3 bg-white/5 hover:bg-white/10 rounded-xl transition-all duration-200 cursor-default"
                 >
                   <div className="w-11 h-11 rounded-full bg-gradient-to-r from-purple-500/20 to-pink-500/20 flex items-center justify-center flex-shrink-0 text-xl border border-white/5">
                     {activity.icon}
@@ -320,7 +299,7 @@ const Dashboard = () => {
           </div>
 
           {/* Upcoming Events */}
-          <div className="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 overflow-hidden shadow-lg shadow-purple-500/5 hover:shadow-purple-500/10 transition-shadow duration-300">
+          <div className="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 overflow-hidden">
             <div className="px-6 py-4 border-b border-white/5 flex items-center justify-between">
               <h2 className="text-lg font-semibold text-white flex items-center gap-2">
                 <CalendarIcon className="w-5 h-5 text-pink-400" />
@@ -362,7 +341,7 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Footer Stats */}
+        {/* Footer */}
         <div className="mt-8 flex flex-wrap items-center justify-between gap-3 text-gray-400 text-sm bg-white/5 rounded-xl px-5 py-3.5 border border-white/5">
           <div className="flex items-center gap-2">
             <SparklesIcon className="w-4 h-4 text-purple-400" />
@@ -396,7 +375,6 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* CSS */}
         <style>{`
           @keyframes gradient {
             0% { background-position: 0% 50%; }
