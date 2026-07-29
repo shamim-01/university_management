@@ -28,9 +28,11 @@ A comprehensive **University Management System** built with the MERN Stack. Feat
 
 | Role | Email | Password |
 |------|-------|----------|
-| **👑 Admin** | admin@university.com | admin123 |
-| **👨‍🏫 Teacher** | teacher@university.com | teacher123 |
-| **👨‍🎓 Student** | student@university.com | student123 |
+| **👑 Admin** | `admin@university.com` | `admin123` |
+| **👨‍🏫 Teacher** | `teacher@university.com` | `teacher123` |
+| **👨‍🎓 Student** | `student@university.com` | `student123` |
+
+> **Note:** You can also register a new account from the register page.
 
 ---
 
@@ -38,7 +40,7 @@ A comprehensive **University Management System** built with the MERN Stack. Feat
 
 ### 👑 Admin Features
 - 📊 **Dashboard** - Real-time analytics, charts, statistics
-- 👥 **Student Management** - CRUD, profile images, search & filter
+- 👥 **Student Management** - CRUD, search & filter
 - 👨‍🏫 **Teacher Management** - Assign courses & departments
 - 🏛️ **Department Management** - Complete CRUD operations
 - 📚 **Course Management** - Create, update, delete courses
@@ -75,6 +77,7 @@ A comprehensive **University Management System** built with the MERN Stack. Feat
 | **Tailwind CSS** | Styling |
 | **Axios** | API calls |
 | **Context API** | State management |
+| **Heroicons** | Icons |
 
 ### Backend
 | Technology | Description |
@@ -94,21 +97,70 @@ A comprehensive **University Management System** built with the MERN Stack. Feat
 university-management-system/
 ├── backend/
 │   ├── src/
-│   │   ├── config/         # Database config
+│   │   ├── config/         # Database configuration
 │   │   ├── controllers/    # Business logic
+│   │   │   ├── auth.controller.js
+│   │   │   ├── user.controller.js
+│   │   │   ├── student.controller.js
+│   │   │   ├── teacher.controller.js
+│   │   │   ├── course.controller.js
+│   │   │   ├── department.controller.js
+│   │   │   ├── result.controller.js
+│   │   │   ├── attendance.controller.js
+│   │   │   └── notice.controller.js
 │   │   ├── models/         # Database models
+│   │   │   ├── User.js
+│   │   │   ├── Student.js
+│   │   │   ├── Teacher.js
+│   │   │   ├── Course.js
+│   │   │   ├── Department.js
+│   │   │   ├── Result.js
+│   │   │   ├── Attendance.js
+│   │   │   └── Notice.js
 │   │   ├── routes/         # API routes
+│   │   │   ├── index.js
+│   │   │   ├── auth.routes.js
+│   │   │   ├── user.routes.js
+│   │   │   ├── student.routes.js
+│   │   │   ├── teacher.routes.js
+│   │   │   ├── course.routes.js
+│   │   │   ├── department.routes.js
+│   │   │   ├── result.routes.js
+│   │   │   ├── attendance.routes.js
+│   │   │   └── notice.routes.js
 │   │   ├── middlewares/    # Auth, error middleware
-│   │   └── utils/          # Helper functions
+│   │   │   ├── auth.middleware.js
+│   │   │   └── error.middleware.js
+│   │   ├── utils/          # Helper functions
+│   │   │   └── AppError.js
+│   │   └── index.js        # Entry point
 │   ├── .env
 │   └── package.json
 ├── frontend/
 │   ├── src/
 │   │   ├── components/     # Reusable components
+│   │   │   ├── Layout/
+│   │   │   ├── Dashboard.jsx
+│   │   │   ├── Students.jsx
+│   │   │   ├── Teachers.jsx
+│   │   │   ├── Courses.jsx
+│   │   │   ├── Departments.jsx
+│   │   │   ├── Results.jsx
+│   │   │   ├── Attendance.jsx
+│   │   │   ├── Notices.jsx
+│   │   │   ├── Profile.jsx
+│   │   │   ├── Login.jsx
+│   │   │   └── Register.jsx
 │   │   ├── context/        # Context providers
-│   │   └── services/       # API services
+│   │   │   └── AuthContext.jsx
+│   │   ├── services/       # API services
+│   │   │   └── api.js
+│   │   ├── App.jsx
+│   │   └── main.jsx
 │   ├── .env
-│   └── package.json
+│   ├── package.json
+│   └── vite.config.js
+├── .gitignore
 └── README.md
 ```
 
@@ -170,10 +222,13 @@ npm run dev
 | POST | `/api/auth/login` | Login user |
 | POST | `/api/auth/forgot-password` | Request password reset |
 | POST | `/api/auth/reset-password/:token` | Reset password |
-| PUT | `/api/users/profile` | Update profile |
 | PUT | `/api/auth/change-password` | Change password |
 
----
+### 👤 Users & Profile
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/users/profile` | Get user profile |
+| PUT | `/api/users/profile` | Update user profile |
 
 ### 👨‍🎓 Students
 | Method | Endpoint | Description |
@@ -183,9 +238,6 @@ npm run dev
 | POST | `/api/students` | Create student |
 | PUT | `/api/students/:id` | Update student |
 | DELETE | `/api/students/:id` | Delete student |
-| POST | `/api/students/:id/avatar` | Upload student avatar |
-
----
 
 ### 👨‍🏫 Teachers
 | Method | Endpoint | Description |
@@ -196,8 +248,6 @@ npm run dev
 | PUT | `/api/teachers/:id` | Update teacher |
 | DELETE | `/api/teachers/:id` | Delete teacher |
 
----
-
 ### 🏛️ Departments
 | Method | Endpoint | Description |
 |--------|----------|-------------|
@@ -207,8 +257,6 @@ npm run dev
 | PUT | `/api/departments/:id` | Update department |
 | DELETE | `/api/departments/:id` | Delete department |
 
----
-
 ### 📚 Courses
 | Method | Endpoint | Description |
 |--------|----------|-------------|
@@ -217,8 +265,6 @@ npm run dev
 | POST | `/api/courses` | Create course |
 | PUT | `/api/courses/:id` | Update course |
 | DELETE | `/api/courses/:id` | Delete course |
-
----
 
 ### 📊 Results
 | Method | Endpoint | Description |
@@ -230,8 +276,6 @@ npm run dev
 | PUT | `/api/results/:id` | Update result |
 | DELETE | `/api/results/:id` | Delete result |
 
----
-
 ### 📝 Attendance
 | Method | Endpoint | Description |
 |--------|----------|-------------|
@@ -239,8 +283,6 @@ npm run dev
 | POST | `/api/attendance` | Mark attendance |
 | PUT | `/api/attendance/:id` | Update attendance |
 | DELETE | `/api/attendance/:id` | Delete attendance |
-
----
 
 ### 📢 Notices
 | Method | Endpoint | Description |
@@ -250,8 +292,6 @@ npm run dev
 | POST | `/api/notices` | Create notice |
 | PUT | `/api/notices/:id` | Update notice |
 | DELETE | `/api/notices/:id` | Delete notice |
-
----
 
 ### 🏥 Health Check
 | Method | Endpoint | Description |
@@ -269,14 +309,14 @@ npm run dev
 
 ---
 
-## 🔒 Authentication Required
+## 🔒 Authentication
 
 **Protected Routes** (Need Token in Header):
 ```
 Authorization: Bearer <your_jwt_token>
 ```
 
-All routes except these are protected:
+**Public Routes** (No Token Required):
 - `/api/auth/register`
 - `/api/auth/login`
 - `/api/auth/forgot-password`
