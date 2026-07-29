@@ -10,7 +10,6 @@ import {
   SparklesIcon,
   ArrowPathIcon,
   TrendingUpIcon,
-  TrendingDownIcon,
 } from '@heroicons/react/24/outline';
 
 const Analytics = () => {
