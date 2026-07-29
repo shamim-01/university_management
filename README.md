@@ -1,5 +1,5 @@
 ```markdown
-## 🎓 University Management System
+# 🎓 University Management System
 
 <div align="center">
 
