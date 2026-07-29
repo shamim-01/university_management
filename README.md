@@ -1,3 +1,4 @@
+```markdown
 ## 🎓 University Management System
 
 <div align="center">
@@ -11,7 +12,7 @@
 
 ### A Complete Production-Ready University Management Platform
 
-[![Live Demo](https://img.shields.io/badge/🚀_Live_Demo-Click_Here-4F46E5?style=for-the-badge&logo=vercel)](https://university-management-je87.vercel.app)
+[![Live Demo](https://img.shields.io/badge/🚀_Live_Demo-Click_Here-4F46E5?style=for-the-badge&logo=vercel)](https://university-management-ruddy.vercel.app)
 
 </div>
 
@@ -28,8 +29,8 @@ A comprehensive **University Management System** built with the MERN Stack. Feat
 | Role | Email | Password |
 |------|-------|----------|
 | **👑 Admin** | admin@university.com | admin123 |
-| **👨‍🏫 Teacher** | teacher@university.com | Teacher@123 |
-| **👨‍🎓 Student** | student@university.com | Student@123 |
+| **👨‍🏫 Teacher** | teacher@university.com | teacher123 |
+| **👨‍🎓 Student** | student@university.com | student123 |
 
 ---
 
@@ -73,10 +74,7 @@ A comprehensive **University Management System** built with the MERN Stack. Feat
 | **React Router** | Navigation |
 | **Tailwind CSS** | Styling |
 | **Axios** | API calls |
-| **TanStack Query** | Server state management |
-| **React Hook Form** | Form handling |
 | **Context API** | State management |
-| **Recharts** | Charts & analytics |
 
 ### Backend
 | Technology | Description |
@@ -87,8 +85,6 @@ A comprehensive **University Management System** built with the MERN Stack. Feat
 | **Mongoose** | ODM |
 | **JWT** | Authentication |
 | **bcryptjs** | Password hashing |
-| **Cloudinary** | Image storage |
-| **Nodemailer** | Email service |
 
 ---
 
@@ -98,21 +94,17 @@ A comprehensive **University Management System** built with the MERN Stack. Feat
 university-management-system/
 ├── backend/
 │   ├── src/
-│   │   ├── config/         # Database & Cloudinary config
+│   │   ├── config/         # Database config
 │   │   ├── controllers/    # Business logic
-│   │   ├── models/         # Database models (9 models)
+│   │   ├── models/         # Database models
 │   │   ├── routes/         # API routes
-│   │   ├── middlewares/    # Auth, error, upload middleware
-│   │   ├── utils/          # Helper functions
-│   │   └── validators/     # Request validation
+│   │   ├── middlewares/    # Auth, error middleware
+│   │   └── utils/          # Helper functions
 │   ├── .env
 │   └── package.json
 ├── frontend/
 │   ├── src/
 │   │   ├── components/     # Reusable components
-│   │   ├── pages/          # Page components
-│   │   ├── layouts/        # Layout components
-│   │   ├── hooks/          # Custom hooks
 │   │   ├── context/        # Context providers
 │   │   └── services/       # API services
 │   ├── .env
@@ -128,14 +120,13 @@ university-management-system/
 - Node.js (v18+)
 - MongoDB
 - npm or yarn
-- Cloudinary Account
 
 ### Backend Setup
 
 ```bash
 # Clone repository
-git clone https://github.com/yourusername/university-management-system.git
-cd university-management-system/backend
+git clone https://github.com/shamim-01/university_management.git
+cd university_management/backend
 
 # Install dependencies
 npm install
@@ -143,13 +134,10 @@ npm install
 # Create .env file
 PORT=5000
 NODE_ENV=development
-MONGODB_URI=mongodb://localhost:27017/university_management
+MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/dbname
 JWT_SECRET=your_super_secret_jwt_key
 JWT_EXPIRE=30d
-CLOUDINARY_CLOUD_NAME=your_cloud_name
-CLOUDINARY_API_KEY=your_api_key
-CLOUDINARY_API_SECRET=your_api_secret
-FRONTEND_URL=http://localhost:3000
+FRONTEND_URL=http://localhost:5173
 
 # Run server
 npm run dev
@@ -173,9 +161,9 @@ npm run dev
 
 ---
 
-# 📊 API Endpoints
+## 📊 API Endpoints
 
-## 🔐 Authentication
+### 🔐 Authentication
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | POST | `/api/auth/register` | Register new user |
@@ -187,7 +175,7 @@ npm run dev
 
 ---
 
-## 👨‍🎓 Students
+### 👨‍🎓 Students
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/api/students` | Get all students |
@@ -199,7 +187,7 @@ npm run dev
 
 ---
 
-## 👨‍🏫 Teachers
+### 👨‍🏫 Teachers
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/api/teachers` | Get all teachers |
@@ -210,7 +198,7 @@ npm run dev
 
 ---
 
-## 🏛️ Departments
+### 🏛️ Departments
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/api/departments` | Get all departments |
@@ -221,7 +209,7 @@ npm run dev
 
 ---
 
-## 📚 Courses
+### 📚 Courses
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/api/courses` | Get all courses |
@@ -232,7 +220,7 @@ npm run dev
 
 ---
 
-## 📊 Results
+### 📊 Results
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/api/results/student/all` | Get all students results |
@@ -244,7 +232,7 @@ npm run dev
 
 ---
 
-## 📝 Attendance
+### 📝 Attendance
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/api/attendance/course/:courseId` | Get course attendance |
@@ -254,7 +242,7 @@ npm run dev
 
 ---
 
-## 📢 Notices
+### 📢 Notices
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/api/notices` | Get all notices |
@@ -265,36 +253,37 @@ npm run dev
 
 ---
 
-## 🏥 Health Check
+### 🏥 Health Check
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/api/health` | Check API health status |
 
 ---
 
-## 📝 Change Log
+## 🌐 Live URLs
 
-### 🔄 Updated Routes
-| Old Endpoint | New Endpoint | Reason |
-|--------------|--------------|--------|
-| `PUT /api/auth/profile` | `PUT /api/users/profile` | Moved to user routes |
-| `GET /api/results` | `GET /api/results/student/all` | Clearer endpoint naming |
-| `GET /api/results/:id` | ❌ Removed | Not implemented |
-| `GET /api/attendance` | `GET /api/attendance/course/:courseId` | Course-specific |
-| `GET /api/attendance/student/:studentId` | ❌ Removed | Not implemented |
-
-### ✅ Added Routes
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/results/public-dashboard` | Dashboard statistics |
-| GET | `/api/notices/:id` | Get single notice |
-| GET | `/api/health` | Health check endpoint |
+| Service | URL |
+|---------|-----|
+| **Frontend** | [https://university-management-ruddy.vercel.app](https://university-management-ruddy.vercel.app) |
+| **Backend** | [https://university-management-ttvo.onrender.com](https://university-management-ttvo.onrender.com) |
 
 ---
 
 ## 🔒 Authentication Required
 
 **Protected Routes** (Need Token in Header):
+```
+Authorization: Bearer <your_jwt_token>
+```
+
+All routes except these are protected:
+- `/api/auth/register`
+- `/api/auth/login`
+- `/api/auth/forgot-password`
+- `/api/auth/reset-password/:token`
+- `/api/health`
+
+---
 
 ## 📸 Pages
 
@@ -327,11 +316,11 @@ npm run dev
 
 ## 🎨 UI Features
 
-- 🌙 **Dark/Light Theme**
+- 🌙 **Dark Theme**
 - ✨ **Glassmorphism Design**
 - 📱 **Responsive Layout**
 - 🎯 **Animated Sidebar**
-- 💫 **Loading Skeletons**
+- 💫 **Loading Animations**
 - 🔔 **Toast Notifications**
 - 📊 **Interactive Charts**
 
@@ -344,8 +333,6 @@ npm run dev
 - ✅ Role-Based Access Control
 - ✅ Input Validation
 - ✅ XSS Protection
-- ✅ Rate Limiting
-- ✅ Helmet.js Security Headers
 - ✅ CORS Configuration
 
 ---
@@ -353,7 +340,7 @@ npm run dev
 ## 🚀 Deployment
 
 ### Deploy to Vercel (Frontend)
-[![Deploy to Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/yourusername/university-management-system)
+[![Deploy to Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/shamim-01/university_management)
 
 ### Deploy to Render (Backend)
 [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy)
@@ -372,15 +359,14 @@ npm run dev
 
 ## 📄 License
 
-MIT License © 2024
+MIT License © 2026
 
 ---
 
 ## 👨‍💻 Author
 
-**Your Name**
-- GitHub: [@yourusername](https://github.com/yourusername)
-- LinkedIn: [@yourusername](https://linkedin.com/in/yourusername)
+**Shamim Alam**
+- GitHub: [@shamim-01](https://github.com/shamim-01)
 
 ---
 
@@ -388,6 +374,7 @@ MIT License © 2024
 
 ### ⭐ Star this repository if you found it helpful!
 
-Made with ❤️ by [Shamim alam]
+Made with ❤️ by [Shamim Alam](https://github.com/shamim-01)
 
 </div>
+```
