@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import { MagnifyingGlassIcon, XMarkIcon } from '@heroicons/react/24/outline';
@@ -8,6 +8,7 @@ const AllResults = () => {
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
   const [stats, setStats] = useState({
     total: 0,
     passed: 0,
@@ -15,13 +16,27 @@ const AllResults = () => {
     cgpa: 0,
   });
 
-  const fetchResults = async (search = '') => {
+  // ✅ Refs for canceling requests
+  const abortControllerRef = useRef(null);
+  const timeoutRef = useRef(null);
+
+  // ✅ Optimized fetchResults with AbortController
+  const fetchResults = useCallback(async (search = '') => {
+    // Cancel previous request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
     try {
+      setIsSearching(true);
       setLoading(true);
 
-      // ✅ পরিবর্তন: 'all' studentId দিয়ে কল করুন
+      // Create new AbortController
+      abortControllerRef.current = new AbortController();
+
       const res = await api.get('/results/student/all', {
         params: { search: search || undefined },
+        signal: abortControllerRef.current.signal,
       });
 
       console.log('📊 All results fetched:', res.data);
@@ -35,25 +50,61 @@ const AllResults = () => {
         cgpa: data.summary?.cgpa || 0,
       });
     } catch (err) {
-      console.error('Failed to fetch results:', err);
+      // Ignore canceled requests
+      if (err.name === 'CanceledError' || err.name === 'AbortError') {
+        console.log('🔄 Request cancelled:', search);
+        return;
+      }
+      console.error('❌ Failed to fetch results:', err);
       if (err.response?.status === 404) {
-        // Fallback: যদি route না থাকে
         setResults([]);
         setStats({ total: 0, passed: 0, failed: 0, cgpa: 0 });
       }
     } finally {
       setLoading(false);
+      setIsSearching(false);
     }
-  };
-
-  useEffect(() => {
-    fetchResults();
   }, []);
 
+  // ✅ Debounced Search with cleanup
   useEffect(() => {
-    const timer = setTimeout(() => fetchResults(searchTerm), 400);
-    return () => clearTimeout(timer);
-  }, [searchTerm]);
+    // Clear previous timeout
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+
+    // Set new timeout
+    timeoutRef.current = setTimeout(() => {
+      fetchResults(searchTerm);
+    }, 400);
+
+    // Cleanup
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, [searchTerm, fetchResults]);
+
+  // ✅ Initial load with cleanup
+  useEffect(() => {
+    fetchResults('');
+
+    return () => {
+      // Cancel any ongoing requests on unmount
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
+
+  // ✅ Clear search
+  const clearSearch = () => {
+    setSearchTerm('');
+  };
 
   // Get grade color
   const getGradeColor = grade => {
@@ -72,7 +123,7 @@ const AllResults = () => {
     return colors[grade] || 'text-gray-400 bg-gray-500/20';
   };
 
-  if (loading) {
+  if (loading && !results.length) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
@@ -131,9 +182,14 @@ const AllResults = () => {
           onChange={e => setSearchTerm(e.target.value)}
           className="w-full pl-9 pr-9 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white text-sm placeholder-gray-400 focus:outline-none focus:border-purple-500 transition"
         />
-        {searchTerm && (
+        {isSearching && (
+          <div className="absolute right-3 top-1/2 -translate-y-1/2">
+            <div className="w-4 h-4 border-2 border-purple-500/20 border-t-purple-500 rounded-full animate-spin" />
+          </div>
+        )}
+        {searchTerm && !isSearching && (
           <button
-            onClick={() => setSearchTerm('')}
+            onClick={clearSearch}
             className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition"
           >
             <XMarkIcon className="w-4 h-4" />
@@ -147,6 +203,9 @@ const AllResults = () => {
           <table className="w-full text-sm">
             <thead className="bg-white/5 border-b border-white/10">
               <tr>
+                <th className="px-4 py-3 text-left text-gray-400 font-medium text-xs uppercase tracking-wider">
+                  #
+                </th>
                 <th className="px-4 py-3 text-left text-gray-400 font-medium text-xs uppercase tracking-wider">
                   Student
                 </th>
@@ -174,6 +233,9 @@ const AllResults = () => {
                     key={r._id || index}
                     className="hover:bg-white/5 transition"
                   >
+                    <td className="px-4 py-3 text-gray-500 text-xs">
+                      {index + 1}
+                    </td>
                     <td className="px-4 py-3">
                       <p className="text-white font-medium">
                         {r.student?.user?.name || 'N/A'}
@@ -219,7 +281,7 @@ const AllResults = () => {
                 ))
               ) : (
                 <tr>
-                  <td colSpan="6" className="px-4 py-12 text-center">
+                  <td colSpan="7" className="px-4 py-12 text-center">
                     <div className="flex flex-col items-center">
                       <div className="text-4xl mb-3">📭</div>
                       <p className="text-gray-400">
@@ -229,7 +291,7 @@ const AllResults = () => {
                       </p>
                       {searchTerm && (
                         <button
-                          onClick={() => setSearchTerm('')}
+                          onClick={clearSearch}
                           className="mt-2 text-purple-400 hover:text-purple-300 text-sm transition"
                         >
                           Clear search
