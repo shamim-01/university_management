@@ -173,73 +173,128 @@ npm run dev
 
 ---
 
-## 📊 API Endpoints
+# 📊 API Endpoints
 
-### Authentication
+## 🔐 Authentication
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `POST` | `/api/auth/register` | Register new user |
-| `POST` | `/api/auth/login` | Login user |
-| `POST` | `/api/auth/forgot-password` | Request password reset |
-| `POST` | `/api/auth/reset-password/:token` | Reset password |
-| `PUT` | `/api/auth/profile` | Update profile |
-| `PUT` | `/api/auth/change-password` | Change password |
-
-### Students
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/api/students` | Get all students |
-| `GET` | `/api/students/:id` | Get single student |
-| `POST` | `/api/students` | Create student |
-| `PUT` | `/api/students/:id` | Update student |
-| `DELETE` | `/api/students/:id` | Delete student |
-| `POST` | `/api/students/:id/avatar` | Upload avatar |
-
-### Teachers
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/api/teachers` | Get all teachers |
-| `GET` | `/api/teachers/:id` | Get single teacher |
-| `POST` | `/api/teachers` | Create teacher |
-| `PUT` | `/api/teachers/:id` | Update teacher |
-| `DELETE` | `/api/teachers/:id` | Delete teacher |
-
-### Courses
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/api/courses` | Get all courses |
-| `GET` | `/api/courses/:id` | Get single course |
-| `POST` | `/api/courses` | Create course |
-| `PUT` | `/api/courses/:id` | Update course |
-| `DELETE` | `/api/courses/:id` | Delete course |
-
-### Results
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/api/results` | Get all results |
-| `GET` | `/api/results/:id` | Get single result |
-| `POST` | `/api/results` | Create result |
-| `PUT` | `/api/results/:id` | Update result |
-| `DELETE` | `/api/results/:id` | Delete result |
-| `GET` | `/api/results/student/:studentId` | Get student results |
-
-### Attendance
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/api/attendance` | Get all attendance |
-| `POST` | `/api/attendance` | Mark attendance |
-| `PUT` | `/api/attendance/:id` | Update attendance |
-| `GET` | `/api/attendance/student/:studentId` | Get student attendance |
-
-### Notices
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/api/notices` | Get all notices |
-| `POST` | `/api/notices` | Create notice |
-| `PUT` | `/api/notices/:id` | Update notice |
-| `DELETE` | `/api/notices/:id` | Delete notice |
+| POST | `/api/auth/register` | Register new user |
+| POST | `/api/auth/login` | Login user |
+| POST | `/api/auth/forgot-password` | Request password reset |
+| POST | `/api/auth/reset-password/:token` | Reset password |
+| PUT | `/api/users/profile` | Update profile |
+| PUT | `/api/auth/change-password` | Change password |
 
 ---
+
+## 👨‍🎓 Students
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/students` | Get all students |
+| GET | `/api/students/:id` | Get single student |
+| POST | `/api/students` | Create student |
+| PUT | `/api/students/:id` | Update student |
+| DELETE | `/api/students/:id` | Delete student |
+| POST | `/api/students/:id/avatar` | Upload student avatar |
+
+---
+
+## 👨‍🏫 Teachers
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/teachers` | Get all teachers |
+| GET | `/api/teachers/:id` | Get single teacher |
+| POST | `/api/teachers` | Create teacher |
+| PUT | `/api/teachers/:id` | Update teacher |
+| DELETE | `/api/teachers/:id` | Delete teacher |
+
+---
+
+## 🏛️ Departments
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/departments` | Get all departments |
+| GET | `/api/departments/:id` | Get single department |
+| POST | `/api/departments` | Create department |
+| PUT | `/api/departments/:id` | Update department |
+| DELETE | `/api/departments/:id` | Delete department |
+
+---
+
+## 📚 Courses
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/courses` | Get all courses |
+| GET | `/api/courses/:id` | Get single course |
+| POST | `/api/courses` | Create course |
+| PUT | `/api/courses/:id` | Update course |
+| DELETE | `/api/courses/:id` | Delete course |
+
+---
+
+## 📊 Results
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/results/student/all` | Get all students results |
+| GET | `/api/results/student/:studentId` | Get student results |
+| GET | `/api/results/public-dashboard` | Get public dashboard data |
+| POST | `/api/results` | Create result |
+| PUT | `/api/results/:id` | Update result |
+| DELETE | `/api/results/:id` | Delete result |
+
+---
+
+## 📝 Attendance
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/attendance/course/:courseId` | Get course attendance |
+| POST | `/api/attendance` | Mark attendance |
+| PUT | `/api/attendance/:id` | Update attendance |
+| DELETE | `/api/attendance/:id` | Delete attendance |
+
+---
+
+## 📢 Notices
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/notices` | Get all notices |
+| GET | `/api/notices/:id` | Get single notice |
+| POST | `/api/notices` | Create notice |
+| PUT | `/api/notices/:id` | Update notice |
+| DELETE | `/api/notices/:id` | Delete notice |
+
+---
+
+## 🏥 Health Check
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/health` | Check API health status |
+
+---
+
+## 📝 Change Log
+
+### 🔄 Updated Routes
+| Old Endpoint | New Endpoint | Reason |
+|--------------|--------------|--------|
+| `PUT /api/auth/profile` | `PUT /api/users/profile` | Moved to user routes |
+| `GET /api/results` | `GET /api/results/student/all` | Clearer endpoint naming |
+| `GET /api/results/:id` | ❌ Removed | Not implemented |
+| `GET /api/attendance` | `GET /api/attendance/course/:courseId` | Course-specific |
+| `GET /api/attendance/student/:studentId` | ❌ Removed | Not implemented |
+
+### ✅ Added Routes
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/results/public-dashboard` | Dashboard statistics |
+| GET | `/api/notices/:id` | Get single notice |
+| GET | `/api/health` | Health check endpoint |
+
+---
+
+## 🔒 Authentication Required
+
+**Protected Routes** (Need Token in Header):
 
 ## 📸 Pages
 
