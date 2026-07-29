@@ -1,5 +1,6 @@
 import express from 'express';
 import authRoutes from './auth.routes.js';
+import userRoutes from './user.routes.js';
 import studentRoutes from './student.routes.js';
 import teacherRoutes from './teacher.routes.js';
 import departmentRoutes from './department.routes.js';
@@ -21,6 +22,7 @@ router.get('/health', (req, res) => {
 
 // Routes
 router.use('/auth', authRoutes);
+router.use('/users', userRoutes);
 router.use('/students', studentRoutes);
 router.use('/teachers', teacherRoutes);
 router.use('/departments', departmentRoutes);
