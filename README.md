@@ -362,7 +362,7 @@ Authorization: Bearer <your_jwt_token>
 
 ## 📄 License
 
-MIT License © 2024
+MIT License © 2026
 
 ---
 
