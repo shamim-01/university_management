@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import {
@@ -8,6 +8,11 @@ import {
   TrashIcon,
   XMarkIcon,
   AcademicCapIcon,
+  ArrowPathIcon,
+  ChartBarIcon,
+  SparklesIcon,
+  ClockIcon,
+  UserGroupIcon,
 } from '@heroicons/react/24/outline';
 
 const Courses = () => {
@@ -15,6 +20,7 @@ const Courses = () => {
   const [courses, setCourses] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -27,7 +33,6 @@ const Courses = () => {
     semester: 1,
   });
 
-  // Filter courses based on search
   const filteredCourses = courses.filter(course => {
     const search = searchTerm.toLowerCase();
     return (
@@ -37,34 +42,24 @@ const Courses = () => {
     );
   });
 
-  // Fetch Courses from API
-  const fetchCourses = async () => {
+  const fetchCourses = async (showRefresh = false) => {
     try {
-      console.log('📥 1. Fetching courses from API...');
+      if (showRefresh) setRefreshing(true);
+      else setLoading(true);
+
       const response = await api.get('/courses');
-      console.log('📥 2. API Response:', response);
-      console.log('📥 3. Response data:', response.data);
-
       const coursesData = response.data?.courses || response.data?.data || [];
-      console.log('📥 4. Courses data:', coursesData);
-
-      if (coursesData.length > 0) {
-        setCourses(coursesData);
-        console.log('✅ 5. Courses set! Count:', coursesData.length);
-      } else {
-        console.warn('⚠️ 6. No courses found in API');
-        setCourses([]);
-      }
+      setCourses(coursesData);
+      setError('');
     } catch (err) {
-      console.error('❌ 7. Error fetching courses:', err);
-      console.error('❌ 8. Error response:', err.response?.data);
+      console.error('Failed to fetch courses:', err);
       setError(err.response?.data?.message || 'Failed to fetch courses');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
-  // Fetch Departments
   const fetchDepartments = async () => {
     try {
       const response = await api.get('/departments');
@@ -79,17 +74,10 @@ const Courses = () => {
     fetchDepartments();
   }, []);
 
-  // Log state changes
-  useEffect(() => {
-    console.log('🔄 Courses state updated:', courses);
-    console.log('🔄 Courses count:', courses.length);
-  }, [courses]);
-
   const handleChange = e => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // Create Course
   const handleCreate = async e => {
     e.preventDefault();
     setError('');
@@ -100,10 +88,7 @@ const Courses = () => {
     }
 
     try {
-      console.log('📝 Creating course:', formData);
-      const response = await api.post('/courses', formData);
-      console.log('✅ Course created:', response.data);
-
+      await api.post('/courses', formData);
       setShowModal(false);
       setFormData({
         code: '',
@@ -114,14 +99,11 @@ const Courses = () => {
         semester: 1,
       });
       await fetchCourses();
-      alert('✅ Course added successfully!');
     } catch (err) {
-      console.error('❌ Error:', err);
       setError(err.response?.data?.message || 'Failed to create course');
     }
   };
 
-  // Delete Course
   const handleDelete = async id => {
     if (!isAdmin()) {
       setError('Only Admin can delete courses');
@@ -132,780 +114,498 @@ const Courses = () => {
       try {
         await api.delete(`/courses/${id}`);
         await fetchCourses();
-        alert('✅ Course deleted successfully!');
       } catch (err) {
         setError('Failed to delete course');
       }
     }
   };
 
+  const clearSearch = () => {
+    setSearchTerm('');
+  };
+
+  const getRandomColor = id => {
+    const colors = [
+      { from: 'from-violet-500', to: 'to-purple-600', bg: 'bg-violet-500/20' },
+      { from: 'from-blue-500', to: 'to-cyan-600', bg: 'bg-blue-500/20' },
+      { from: 'from-emerald-500', to: 'to-teal-600', bg: 'bg-emerald-500/20' },
+      { from: 'from-rose-500', to: 'to-pink-600', bg: 'bg-rose-500/20' },
+      { from: 'from-amber-500', to: 'to-orange-600', bg: 'bg-amber-500/20' },
+      { from: 'from-indigo-500', to: 'to-purple-600', bg: 'bg-indigo-500/20' },
+    ];
+    const index = (id?.length || 0) % colors.length;
+    return colors[index];
+  };
+
+  const getStatusColor = status => {
+    return status === 'active'
+      ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+      : 'bg-red-500/10 text-red-400 border-red-500/20';
+  };
+
   if (loading) {
     return (
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          height: '100vh',
-          color: 'white',
-        }}
-      >
-        <div style={{ textAlign: 'center' }}>
-          <div
-            style={{
-              width: '40px',
-              height: '40px',
-              border: '3px solid rgba(139, 92, 246, 0.2)',
-              borderTop: '3px solid #8b5cf6',
-              borderRadius: '50%',
-              animation: 'spin 1s linear infinite',
-              margin: '0 auto 1rem',
-            }}
-          />
-          <p style={{ color: '#9ca3af' }}>Loading courses...</p>
+      <div className="flex items-center justify-center min-h-[70vh]">
+        <div className="text-center">
+          <div className="relative">
+            <div className="w-16 h-16 border-4 border-purple-500/20 border-t-purple-500 rounded-full animate-spin" />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <BookOpenIcon className="w-6 h-6 text-purple-400/50 animate-pulse" />
+            </div>
+          </div>
+          <p className="text-gray-400 mt-4 font-medium">Loading courses...</p>
+          <p className="text-gray-500 text-sm mt-1">Please wait a moment</p>
         </div>
       </div>
     );
   }
 
-  console.log('🔍 Rendering courses in UI:', courses);
-  console.log('🔍 Courses count in UI:', courses?.length);
-
   return (
-    <div style={{ padding: '1.5rem', maxWidth: '1400px', margin: '0 auto' }}>
-      {/* Header */}
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '1rem',
-          marginBottom: '2rem',
-        }}
-      >
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            flexWrap: 'wrap',
-            gap: '1rem',
-          }}
-        >
-          <div>
-            <h1
-              style={{
-                fontSize: '2rem',
-                fontWeight: 'bold',
-                color: 'white',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.75rem',
-              }}
-            >
-              <span>Courses</span>
-              <span
-                style={{
-                  fontSize: '0.875rem',
-                  background: 'rgba(139, 92, 246, 0.2)',
-                  color: '#a78bfa',
-                  padding: '0.25rem 0.75rem',
-                  borderRadius: '9999px',
-                  fontWeight: 'normal',
-                }}
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-900 to-black p-4 md:p-6">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="relative mb-10">
+          <div className="absolute -top-20 -right-20 w-64 h-64 bg-purple-500/10 rounded-full blur-3xl" />
+          <div className="absolute -bottom-20 -left-20 w-64 h-64 bg-pink-500/10 rounded-full blur-3xl" />
+
+          <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex items-start gap-4">
+              <div className="hidden md:flex w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 border border-purple-500/20 items-center justify-center backdrop-blur-sm">
+                <BookOpenIcon className="w-7 h-7 text-purple-400" />
+              </div>
+              <div>
+                <div className="flex items-center gap-3 flex-wrap">
+                  <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-purple-400 via-pink-400 to-purple-400 bg-clip-text text-transparent animate-gradient">
+                    Course Management
+                  </h1>
+                  <div className="flex items-center gap-1 px-3 py-1 bg-purple-500/20 rounded-full border border-purple-500/20">
+                    <SparklesIcon className="w-3.5 h-3.5 text-purple-400" />
+                    <span className="text-purple-400 text-xs font-medium">
+                      {courses.length} Courses
+                    </span>
+                  </div>
+                </div>
+                <div className="flex flex-wrap items-center gap-3 mt-1.5">
+                  <p className="text-gray-400 text-sm flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />
+                    Manage all available courses and their details
+                  </p>
+                  <span className="hidden sm:flex text-xs text-gray-500">
+                    • {courses.filter(c => c.status !== 'inactive').length}{' '}
+                    active
+                  </span>
+                  <span className="hidden sm:flex text-xs text-gray-500">
+                    • {departments.length} departments
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 flex-wrap">
+              <button
+                onClick={() => fetchCourses(true)}
+                disabled={refreshing}
+                className="flex items-center gap-2 px-4 py-2.5 bg-white/5 hover:bg-white/10 rounded-xl text-gray-300 hover:text-white transition-all duration-200 border border-white/10 hover:border-white/20 disabled:opacity-50 backdrop-blur-sm"
               >
-                {courses.length}
-              </span>
-            </h1>
-            <p
-              style={{
-                color: '#9ca3af',
-                fontSize: '0.875rem',
-                marginTop: '0.25rem',
-              }}
-            >
-              Role:{' '}
-              <span style={{ color: '#a78bfa', textTransform: 'capitalize' }}>
-                {user?.role}
-              </span>
-            </p>
+                <ArrowPathIcon
+                  className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`}
+                />
+                {refreshing ? 'Refreshing...' : 'Refresh'}
+              </button>
+              {isAdmin() && (
+                <button
+                  onClick={() => setShowModal(true)}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl font-medium text-sm hover:scale-[1.02] transition-all duration-200 shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40"
+                >
+                  <PlusIcon className="w-5 h-5" />
+                  Add Course
+                </button>
+              )}
+            </div>
           </div>
-          {isAdmin() && (
-            <button
-              onClick={() => setShowModal(true)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                padding: '0.6rem 1.5rem',
-                background: 'linear-gradient(135deg, #8b5cf6, #ec4899)',
-                color: 'white',
-                borderRadius: '0.5rem',
-                border: 'none',
-                cursor: 'pointer',
-                fontWeight: '600',
-                fontSize: '0.875rem',
-                transition: 'all 0.3s ease',
-                boxShadow: '0 4px 15px rgba(139, 92, 246, 0.3)',
-              }}
-              onMouseEnter={e => {
-                e.currentTarget.style.transform = 'translateY(-2px)';
-                e.currentTarget.style.boxShadow =
-                  '0 6px 25px rgba(139, 92, 246, 0.4)';
-              }}
-              onMouseLeave={e => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow =
-                  '0 4px 15px rgba(139, 92, 246, 0.3)';
-              }}
-            >
-              <PlusIcon style={{ width: '1.25rem', height: '1.25rem' }} />
-              <span>Add Course</span>
-            </button>
-          )}
         </div>
 
+        {error && (
+          <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-xl mb-6 text-sm flex items-center gap-2">
+            <XMarkIcon className="w-5 h-5" />
+            {error}
+          </div>
+        )}
+
         {/* Search Bar */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.75rem',
-            background: 'rgba(255, 255, 255, 0.05)',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
-            borderRadius: '0.5rem',
-            padding: '0.5rem 1rem',
-            maxWidth: '400px',
-            transition: 'all 0.3s ease',
-          }}
-        >
-          <MagnifyingGlassIcon
-            style={{ width: '1.25rem', height: '1.25rem', color: '#6b7280' }}
-          />
+        <div className="relative max-w-md mb-6">
+          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+            <MagnifyingGlassIcon className="w-5 h-5 text-gray-400" />
+          </div>
           <input
             type="text"
-            placeholder="Search courses..."
+            placeholder="Search courses by name, code, or department..."
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
-            style={{
-              flex: 1,
-              background: 'transparent',
-              border: 'none',
-              outline: 'none',
-              color: 'white',
-              fontSize: '0.875rem',
-              padding: '0.25rem 0',
-            }}
+            className="w-full pl-11 pr-12 py-3 bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl text-white text-sm placeholder-gray-400 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all duration-300"
           />
           {searchTerm && (
             <button
-              onClick={() => setSearchTerm('')}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                color: '#6b7280',
-                cursor: 'pointer',
-                padding: '0.25rem',
-              }}
+              onClick={clearSearch}
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 hover:bg-white/10 rounded-lg transition-colors duration-200 text-gray-400 hover:text-white group"
             >
-              <XMarkIcon style={{ width: '1.25rem', height: '1.25rem' }} />
+              <XMarkIcon className="w-5 h-5 group-hover:rotate-90 transition-transform duration-300" />
             </button>
           )}
         </div>
-      </div>
 
-      {error && (
-        <div
-          style={{
-            background: 'rgba(239, 68, 68, 0.15)',
-            color: '#f87171',
-            padding: '0.75rem 1rem',
-            borderRadius: '0.5rem',
-            marginBottom: '1rem',
-            fontSize: '0.875rem',
-            border: '1px solid rgba(239, 68, 68, 0.2)',
-          }}
-        >
-          {error}
-        </div>
-      )}
-
-      {/* Courses Grid */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
-          gap: '1.25rem',
-        }}
-      >
-        {filteredCourses && filteredCourses.length > 0 ? (
-          filteredCourses.map(course => (
-            <div
-              key={course._id}
-              style={{
-                background: 'rgba(255, 255, 255, 0.03)',
-                backdropFilter: 'blur(20px)',
-                borderRadius: '1rem',
-                border: '1px solid rgba(255, 255, 255, 0.06)',
-                padding: '1.5rem',
-                transition: 'all 0.3s ease',
-                position: 'relative',
-                overflow: 'hidden',
-              }}
-              onMouseEnter={e => {
-                e.currentTarget.style.borderColor = 'rgba(139, 92, 246, 0.3)';
-                e.currentTarget.style.transform = 'translateY(-4px)';
-                e.currentTarget.style.boxShadow =
-                  '0 12px 30px rgba(0, 0, 0, 0.3)';
-              }}
-              onMouseLeave={e => {
-                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.06)';
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = 'none';
-              }}
-            >
-              {/* Decorative gradient line */}
-              <div
-                style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  height: '3px',
-                  background: 'linear-gradient(90deg, #8b5cf6, #ec4899)',
-                  opacity: 0.5,
-                }}
-              />
-
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  justifyContent: 'space-between',
-                }}
-              >
+        {/* Courses Grid - Improved Card Design */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredCourses.length > 0 ? (
+            filteredCourses.map(course => {
+              const colors = getRandomColor(course._id);
+              return (
                 <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.75rem',
-                  }}
+                  key={course._id}
+                  className="group relative bg-white/5 backdrop-blur-xl rounded-2xl overflow-hidden border border-white/10 hover:border-purple-500/40 hover:scale-[1.02] transition-all duration-300 shadow-lg shadow-purple-500/5 hover:shadow-purple-500/20"
                 >
+                  {/* Header with gradient - Improved */}
                   <div
-                    style={{
-                      width: '3rem',
-                      height: '3rem',
-                      borderRadius: '0.75rem',
-                      background: `linear-gradient(135deg, ${course._id ? '#8b5cf6' : '#6b7280'}, ${course._id ? '#ec4899' : '#4b5563'})`,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: 'white',
-                      flexShrink: 0,
-                    }}
+                    className={`relative bg-gradient-to-r ${colors.from} ${colors.to} p-5`}
                   >
-                    <BookOpenIcon
-                      style={{ width: '1.25rem', height: '1.25rem' }}
-                    />
+                    <div className="absolute inset-0 bg-black/20" />
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-16 -mt-16" />
+                    <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full blur-xl -ml-12 -mb-12" />
+
+                    <div className="relative flex items-start justify-between">
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center shadow-lg shadow-black/20 flex-shrink-0">
+                          <BookOpenIcon className="w-6 h-6 text-white" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <h3 className="text-white font-bold text-lg truncate">
+                              {course.code}
+                            </h3>
+                            <span
+                              className={`px-2 py-0.5 rounded-full text-[10px] font-medium border ${getStatusColor(course.status)} flex-shrink-0`}
+                            >
+                              {course.status || 'active'}
+                            </span>
+                          </div>
+                          <p className="text-white/80 text-sm truncate">
+                            {course.name}
+                          </p>
+                        </div>
+                      </div>
+                      {isAdmin() && (
+                        <button
+                          onClick={() => handleDelete(course._id)}
+                          className="p-1.5 rounded-lg bg-white/10 hover:bg-red-500/30 text-white/70 hover:text-red-400 transition-all duration-200 flex-shrink-0 ml-2"
+                        >
+                          <TrashIcon className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
                   </div>
-                  <div>
-                    <h3
-                      style={{
-                        color: 'white',
-                        fontWeight: '600',
-                        fontSize: '1rem',
-                      }}
-                    >
-                      {course.name}
-                    </h3>
-                    <p
-                      style={{
-                        color: '#a78bfa',
-                        fontSize: '0.75rem',
-                        fontWeight: '500',
-                      }}
-                    >
-                      {course.code}
-                    </p>
+
+                  {/* Content - Improved */}
+                  <div className="p-5">
+                    {course.description && (
+                      <p className="text-gray-400 text-sm line-clamp-2 mb-4">
+                        {course.description}
+                      </p>
+                    )}
+
+                    <div className="grid grid-cols-2 gap-2.5">
+                      <div className="bg-white/5 rounded-xl p-2.5 hover:bg-white/10 transition-all duration-200">
+                        <p className="text-gray-500 text-[10px] uppercase tracking-wider font-medium">
+                          Department
+                        </p>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <UserGroupIcon className="w-3.5 h-3.5 text-purple-400" />
+                          <p className="text-white text-sm font-medium truncate">
+                            {course.department?.name || 'N/A'}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="bg-white/5 rounded-xl p-2.5 hover:bg-white/10 transition-all duration-200">
+                        <p className="text-gray-500 text-[10px] uppercase tracking-wider font-medium">
+                          Credits
+                        </p>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <AcademicCapIcon className="w-3.5 h-3.5 text-emerald-400" />
+                          <p className="text-white text-sm font-medium">
+                            {course.credits}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="bg-white/5 rounded-xl p-2.5 hover:bg-white/10 transition-all duration-200">
+                        <p className="text-gray-500 text-[10px] uppercase tracking-wider font-medium">
+                          Semester
+                        </p>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <ClockIcon className="w-3.5 h-3.5 text-blue-400" />
+                          <p className="text-white text-sm font-medium">
+                            {course.semester}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="bg-white/5 rounded-xl p-2.5 hover:bg-white/10 transition-all duration-200">
+                        <p className="text-gray-500 text-[10px] uppercase tracking-wider font-medium">
+                          Students
+                        </p>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <UserGroupIcon className="w-3.5 h-3.5 text-pink-400" />
+                          <p className="text-white text-sm font-medium">
+                            {course.students?.length || 0}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {course.teacher && (
+                      <div className="mt-3.5 pt-3.5 border-t border-white/5 flex items-center gap-2.5">
+                        <div className="w-6 h-6 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0">
+                          {course.teacher?.name?.charAt(0) || 'T'}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-gray-400 text-xs">Instructor</p>
+                          <p className="text-gray-200 text-sm font-medium truncate">
+                            {course.teacher?.name || 'Not Assigned'}
+                          </p>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
-                {isAdmin() && (
+              );
+            })
+          ) : (
+            <div className="col-span-full">
+              <div className="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 p-12 text-center">
+                <div className="w-20 h-20 bg-white/5 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                  <BookOpenIcon className="w-10 h-10 text-gray-600" />
+                </div>
+                <p className="text-gray-400 text-lg font-medium">
+                  {searchTerm
+                    ? 'No courses match your search'
+                    : 'No courses found'}
+                </p>
+                <p className="text-gray-500 text-sm mt-1">
+                  {searchTerm
+                    ? 'Try adjusting your search terms'
+                    : 'Click "Add Course" to create your first course'}
+                </p>
+                {searchTerm && (
                   <button
-                    onClick={() => handleDelete(course._id)}
-                    style={{
-                      padding: '0.3rem',
-                      borderRadius: '0.375rem',
-                      background: 'transparent',
-                      color: '#6b7280',
-                      border: 'none',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease',
-                    }}
-                    onMouseEnter={e => {
-                      e.currentTarget.style.color = '#f87171';
-                      e.currentTarget.style.background =
-                        'rgba(239, 68, 68, 0.1)';
-                    }}
-                    onMouseLeave={e => {
-                      e.currentTarget.style.color = '#6b7280';
-                      e.currentTarget.style.background = 'transparent';
-                    }}
+                    onClick={clearSearch}
+                    className="mt-4 px-6 py-2 bg-purple-500/20 hover:bg-purple-500/30 rounded-lg text-purple-400 text-sm transition-all duration-200"
                   >
-                    <TrashIcon style={{ width: '1rem', height: '1rem' }} />
+                    Clear search
                   </button>
                 )}
               </div>
-
-              {course.description && (
-                <p
-                  style={{
-                    marginTop: '0.75rem',
-                    color: '#9ca3af',
-                    fontSize: '0.875rem',
-                    lineHeight: '1.5',
-                  }}
-                >
-                  {course.description}
-                </p>
-              )}
-
-              <div
-                style={{
-                  marginTop: '0.75rem',
-                  padding: '0.75rem',
-                  background: 'rgba(255, 255, 255, 0.03)',
-                  borderRadius: '0.5rem',
-                  display: 'grid',
-                  gridTemplateColumns: '1fr 1fr',
-                  gap: '0.5rem',
-                  fontSize: '0.75rem',
-                }}
-              >
-                <div>
-                  <p style={{ color: '#6b7280' }}>Department</p>
-                  <p style={{ color: '#d1d5db', fontWeight: '500' }}>
-                    {course.department?.name || 'N/A'}
-                  </p>
-                </div>
-                <div>
-                  <p style={{ color: '#6b7280' }}>Credits</p>
-                  <p style={{ color: '#d1d5db', fontWeight: '500' }}>
-                    {course.credits}
-                  </p>
-                </div>
-                <div>
-                  <p style={{ color: '#6b7280' }}>Semester</p>
-                  <p style={{ color: '#d1d5db', fontWeight: '500' }}>
-                    Semester {course.semester}
-                  </p>
-                </div>
-                <div>
-                  <p style={{ color: '#6b7280' }}>Status</p>
-                  <span
-                    style={{
-                      display: 'inline-block',
-                      padding: '0.125rem 0.5rem',
-                      borderRadius: '9999px',
-                      fontSize: '0.625rem',
-                      fontWeight: '500',
-                      background:
-                        course.status === 'active'
-                          ? 'rgba(34, 197, 94, 0.15)'
-                          : 'rgba(239, 68, 68, 0.15)',
-                      color: course.status === 'active' ? '#4ade80' : '#f87171',
-                    }}
-                  >
-                    {course.status || 'active'}
-                  </span>
-                </div>
-              </div>
-
-              {course.teacher && (
-                <div
-                  style={{
-                    marginTop: '0.5rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                    paddingTop: '0.5rem',
-                    borderTop: '1px solid rgba(255, 255, 255, 0.04)',
-                  }}
-                >
-                  <AcademicCapIcon
-                    style={{
-                      width: '0.875rem',
-                      height: '0.875rem',
-                      color: '#6b7280',
-                    }}
-                  />
-                  <span style={{ color: '#6b7280', fontSize: '0.75rem' }}>
-                    Instructor:{' '}
-                    <span style={{ color: '#d1d5db' }}>
-                      {course.teacher?.name || 'Not Assigned'}
-                    </span>
-                  </span>
-                </div>
-              )}
             </div>
-          ))
-        ) : (
-          <div
-            style={{
-              gridColumn: '1 / -1',
-              textAlign: 'center',
-              padding: '3rem',
-              color: '#6b7280',
-              background: 'rgba(255, 255, 255, 0.03)',
-              borderRadius: '1rem',
-              border: '1px dashed rgba(255, 255, 255, 0.06)',
-            }}
-          >
-            {searchTerm
-              ? 'No courses match your search'
-              : 'No courses found. Click "Add Course" to create one.'}
+          )}
+        </div>
+
+        {/* Footer */}
+        {courses.length > 0 && (
+          <div className="mt-6 flex flex-wrap items-center justify-between gap-3 text-gray-400 text-sm bg-white/5 rounded-xl px-4 py-3 border border-white/5">
+            <p>
+              Showing{' '}
+              <span className="text-white font-medium">
+                {filteredCourses.length}
+              </span>{' '}
+              of{' '}
+              <span className="text-white font-medium">{courses.length}</span>{' '}
+              courses
+            </p>
+            <div className="flex items-center gap-4">
+              <span className="flex items-center gap-1.5 text-purple-400">
+                <BookOpenIcon className="w-4 h-4" />
+                Total: <span className="font-medium">{courses.length}</span>
+              </span>
+              <span className="flex items-center gap-1.5 text-emerald-400">
+                <ChartBarIcon className="w-4 h-4" />
+                Active:{' '}
+                <span className="font-medium">
+                  {courses.filter(c => c.status !== 'inactive').length}
+                </span>
+              </span>
+            </div>
           </div>
         )}
-      </div>
 
-      {/* Add Course Modal */}
-      {showModal && isAdmin() && (
-        <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(0, 0, 0, 0.7)',
-            backdropFilter: 'blur(4px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-            padding: '1rem',
-            animation: 'fadeIn 0.3s ease',
-          }}
-        >
+        {/* Add Course Modal */}
+        {showModal && isAdmin() && (
           <div
-            style={{
-              background: '#1a1a1a',
-              borderRadius: '1rem',
-              maxWidth: '560px',
-              width: '100%',
-              maxHeight: '90vh',
-              overflow: 'auto',
-              border: '1px solid rgba(255, 255, 255, 0.06)',
-              padding: '2rem',
-              boxShadow: '0 25px 50px rgba(0, 0, 0, 0.5)',
-            }}
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn"
+            onClick={e => e.target === e.currentTarget && setShowModal(false)}
           >
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                marginBottom: '1.5rem',
-              }}
-            >
-              <h2
-                style={{
-                  color: 'white',
-                  fontSize: '1.25rem',
-                  fontWeight: 'bold',
-                }}
-              >
-                Add New Course
-              </h2>
-              <button
-                onClick={() => setShowModal(false)}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  color: '#6b7280',
-                  cursor: 'pointer',
-                  padding: '0.25rem',
-                  borderRadius: '0.375rem',
-                  transition: 'all 0.2s ease',
-                }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.background =
-                    'rgba(255, 255, 255, 0.05)';
-                  e.currentTarget.style.color = 'white';
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.background = 'transparent';
-                  e.currentTarget.style.color = '#6b7280';
-                }}
-              >
-                <XMarkIcon style={{ width: '1.5rem', height: '1.5rem' }} />
-              </button>
-            </div>
-
-            <form onSubmit={handleCreate}>
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr 1fr',
-                  gap: '0.75rem',
-                }}
-              >
-                <input
-                  name="code"
-                  placeholder="Course Code *"
-                  value={formData.code}
-                  onChange={handleChange}
-                  style={{
-                    gridColumn: '1 / -1',
-                    padding: '0.75rem',
-                    background: 'rgba(255,255,255,0.05)',
-                    border: '1px solid rgba(255,255,255,0.06)',
-                    borderRadius: '0.5rem',
-                    color: 'white',
-                    outline: 'none',
-                    fontSize: '0.875rem',
-                    transition: 'all 0.2s ease',
-                  }}
-                  onFocus={e => {
-                    e.currentTarget.style.borderColor = '#8b5cf6';
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
-                  }}
-                  onBlur={e => {
-                    e.currentTarget.style.borderColor =
-                      'rgba(255,255,255,0.06)';
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
-                  }}
-                  required
-                />
-                <input
-                  name="name"
-                  placeholder="Course Name *"
-                  value={formData.name}
-                  onChange={handleChange}
-                  style={{
-                    gridColumn: '1 / -1',
-                    padding: '0.75rem',
-                    background: 'rgba(255,255,255,0.05)',
-                    border: '1px solid rgba(255,255,255,0.06)',
-                    borderRadius: '0.5rem',
-                    color: 'white',
-                    outline: 'none',
-                    fontSize: '0.875rem',
-                    transition: 'all 0.2s ease',
-                  }}
-                  onFocus={e => {
-                    e.currentTarget.style.borderColor = '#8b5cf6';
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
-                  }}
-                  onBlur={e => {
-                    e.currentTarget.style.borderColor =
-                      'rgba(255,255,255,0.06)';
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
-                  }}
-                  required
-                />
-                <input
-                  name="description"
-                  placeholder="Description"
-                  value={formData.description}
-                  onChange={handleChange}
-                  style={{
-                    gridColumn: '1 / -1',
-                    padding: '0.75rem',
-                    background: 'rgba(255,255,255,0.05)',
-                    border: '1px solid rgba(255,255,255,0.06)',
-                    borderRadius: '0.5rem',
-                    color: 'white',
-                    outline: 'none',
-                    fontSize: '0.875rem',
-                    transition: 'all 0.2s ease',
-                  }}
-                  onFocus={e => {
-                    e.currentTarget.style.borderColor = '#8b5cf6';
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
-                  }}
-                  onBlur={e => {
-                    e.currentTarget.style.borderColor =
-                      'rgba(255,255,255,0.06)';
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
-                  }}
-                />
-
-                {/* Fixed: Select Department - White Text Issue Fixed */}
-                <select
-                  name="department"
-                  value={formData.department}
-                  onChange={handleChange}
-                  style={{
-                    gridColumn: '1 / -1',
-                    padding: '0.75rem',
-                    background: 'rgba(255,255,255,0.05)',
-                    border: '1px solid rgba(255,255,255,0.06)',
-                    borderRadius: '0.5rem',
-                    color: 'white',
-                    outline: 'none',
-                    fontSize: '0.875rem',
-                    transition: 'all 0.2s ease',
-                    appearance: 'auto',
-                    WebkitAppearance: 'auto',
-                    MozAppearance: 'auto',
-                  }}
-                  onFocus={e => {
-                    e.currentTarget.style.borderColor = '#8b5cf6';
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
-                  }}
-                  onBlur={e => {
-                    e.currentTarget.style.borderColor =
-                      'rgba(255,255,255,0.06)';
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
-                  }}
-                  required
-                >
-                  <option
-                    value=""
-                    style={{ background: '#1a1a1a', color: '#9ca3af' }}
-                  >
-                    Select Department *
-                  </option>
-                  {departments.map(dept => (
-                    <option
-                      key={dept._id}
-                      value={dept._id}
-                      style={{
-                        background: '#1a1a1a',
-                        color: 'white',
-                        padding: '0.5rem',
-                      }}
-                    >
-                      {dept.name} ({dept.code})
-                    </option>
-                  ))}
-                </select>
-
-                <input
-                  name="credits"
-                  type="number"
-                  placeholder="Credits *"
-                  value={formData.credits}
-                  onChange={handleChange}
-                  style={{
-                    padding: '0.75rem',
-                    background: 'rgba(255,255,255,0.05)',
-                    border: '1px solid rgba(255,255,255,0.06)',
-                    borderRadius: '0.5rem',
-                    color: 'white',
-                    outline: 'none',
-                    fontSize: '0.875rem',
-                    transition: 'all 0.2s ease',
-                  }}
-                  onFocus={e => {
-                    e.currentTarget.style.borderColor = '#8b5cf6';
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
-                  }}
-                  onBlur={e => {
-                    e.currentTarget.style.borderColor =
-                      'rgba(255,255,255,0.06)';
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
-                  }}
-                  required
-                />
-                <input
-                  name="semester"
-                  type="number"
-                  placeholder="Semester *"
-                  value={formData.semester}
-                  onChange={handleChange}
-                  style={{
-                    padding: '0.75rem',
-                    background: 'rgba(255,255,255,0.05)',
-                    border: '1px solid rgba(255,255,255,0.06)',
-                    borderRadius: '0.5rem',
-                    color: 'white',
-                    outline: 'none',
-                    fontSize: '0.875rem',
-                    transition: 'all 0.2s ease',
-                  }}
-                  onFocus={e => {
-                    e.currentTarget.style.borderColor = '#8b5cf6';
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
-                  }}
-                  onBlur={e => {
-                    e.currentTarget.style.borderColor =
-                      'rgba(255,255,255,0.06)';
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
-                  }}
-                  required
-                />
-              </div>
-
-              <div
-                style={{ display: 'flex', gap: '0.75rem', marginTop: '1.5rem' }}
-              >
+            <div className="bg-gray-900 rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto border border-white/10 shadow-2xl">
+              <div className="sticky top-0 bg-gray-900/95 backdrop-blur-sm border-b border-white/10 px-6 py-4 flex items-center justify-between">
+                <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                  <PlusIcon className="w-5 h-5 text-purple-400" />
+                  Add New Course
+                </h2>
                 <button
-                  type="submit"
-                  style={{
-                    flex: 1,
-                    padding: '0.75rem',
-                    background: 'linear-gradient(135deg, #8b5cf6, #ec4899)',
-                    color: 'white',
-                    borderRadius: '0.5rem',
-                    border: 'none',
-                    cursor: 'pointer',
-                    fontWeight: '600',
-                    fontSize: '0.875rem',
-                    transition: 'all 0.3s ease',
-                  }}
-                  onMouseEnter={e => {
-                    e.currentTarget.style.transform = 'translateY(-1px)';
-                    e.currentTarget.style.boxShadow =
-                      '0 4px 15px rgba(139, 92, 246, 0.3)';
-                  }}
-                  onMouseLeave={e => {
-                    e.currentTarget.style.transform = 'translateY(0)';
-                    e.currentTarget.style.boxShadow = 'none';
-                  }}
-                >
-                  Add Course
-                </button>
-                <button
-                  type="button"
                   onClick={() => setShowModal(false)}
-                  style={{
-                    flex: 1,
-                    padding: '0.75rem',
-                    background: 'rgba(255,255,255,0.05)',
-                    color: 'white',
-                    borderRadius: '0.5rem',
-                    border: '1px solid rgba(255,255,255,0.06)',
-                    cursor: 'pointer',
-                    fontWeight: '500',
-                    fontSize: '0.875rem',
-                    transition: 'all 0.2s ease',
-                  }}
-                  onMouseEnter={e => {
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
-                  }}
-                  onMouseLeave={e => {
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
-                  }}
+                  className="p-1.5 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white transition"
                 >
-                  Cancel
+                  <XMarkIcon className="w-6 h-6" />
                 </button>
               </div>
-            </form>
-          </div>
-        </div>
-      )}
 
-      {/* CSS Animation */}
-      <style>{`
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-      `}</style>
+              <form onSubmit={handleCreate} className="p-6 space-y-4">
+                <div>
+                  <label className="block text-gray-400 text-sm font-medium mb-1.5">
+                    Course Code *
+                  </label>
+                  <input
+                    name="code"
+                    placeholder="e.g., CSE401"
+                    value={formData.code}
+                    onChange={handleChange}
+                    className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:border-purple-500 transition"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-gray-400 text-sm font-medium mb-1.5">
+                    Course Name *
+                  </label>
+                  <input
+                    name="name"
+                    placeholder="e.g., Artificial Intelligence"
+                    value={formData.name}
+                    onChange={handleChange}
+                    className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:border-purple-500 transition"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-gray-400 text-sm font-medium mb-1.5">
+                    Department *
+                  </label>
+                  <select
+                    name="department"
+                    value={formData.department}
+                    onChange={handleChange}
+                    className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-purple-500 transition appearance-auto"
+                    required
+                  >
+                    <option value="" className="bg-gray-900 text-gray-400">
+                      Select Department
+                    </option>
+                    {departments.map(dept => (
+                      <option
+                        key={dept._id}
+                        value={dept._id}
+                        className="bg-gray-900 text-white"
+                      >
+                        {dept.name} ({dept.code})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-gray-400 text-sm font-medium mb-1.5">
+                    Description
+                  </label>
+                  <input
+                    name="description"
+                    placeholder="Brief description of the course"
+                    value={formData.description}
+                    onChange={handleChange}
+                    className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:border-purple-500 transition"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-gray-400 text-sm font-medium mb-1.5">
+                      Credits *
+                    </label>
+                    <input
+                      name="credits"
+                      type="number"
+                      min="1"
+                      max="6"
+                      value={formData.credits}
+                      onChange={handleChange}
+                      className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-purple-500 transition"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-gray-400 text-sm font-medium mb-1.5">
+                      Semester *
+                    </label>
+                    <input
+                      name="semester"
+                      type="number"
+                      min="1"
+                      max="12"
+                      value={formData.semester}
+                      onChange={handleChange}
+                      className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-purple-500 transition"
+                      required
+                    />
+                  </div>
+                </div>
+
+                {error && (
+                  <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-2 rounded-lg text-sm">
+                    {error}
+                  </div>
+                )}
+
+                <div className="flex gap-3 pt-2">
+                  <button
+                    type="submit"
+                    className="flex-1 px-4 py-2.5 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg font-medium hover:scale-[1.02] transition-all duration-200 shadow-lg shadow-purple-500/25"
+                  >
+                    Add Course
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowModal(false)}
+                    className="flex-1 px-4 py-2.5 bg-white/5 text-white rounded-lg font-medium hover:bg-white/10 transition"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* CSS */}
+        <style>{`
+          @keyframes gradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+          }
+          .animate-gradient {
+            background-size: 200% auto;
+            animation: gradient 3s ease infinite;
+          }
+          @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+          }
+          .animate-fadeIn {
+            animation: fadeIn 0.2s ease-out;
+          }
+          .line-clamp-2 {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+          }
+        `}</style>
+      </div>
     </div>
   );
 };

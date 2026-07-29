@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import {
@@ -6,43 +6,54 @@ import {
   PlusIcon,
   PencilIcon,
   TrashIcon,
+  MagnifyingGlassIcon,
+  XMarkIcon,
+  ArrowPathIcon,
+  ChartBarIcon,
+  SparklesIcon,
+  CalendarIcon,
+  UserGroupIcon,
 } from '@heroicons/react/24/outline';
 
 const Departments = () => {
   const { user, isAdmin } = useAuth();
   const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
   const [showModal, setShowModal] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
   const [formData, setFormData] = useState({
     name: '',
     code: '',
     description: '',
+    establishedYear: '',
   });
 
-  // Fetch Departments from API
-  const fetchDepartments = async () => {
+  const filteredDepartments = departments.filter(dept => {
+    const search = searchTerm.toLowerCase();
+    return (
+      dept.name?.toLowerCase().includes(search) ||
+      dept.code?.toLowerCase().includes(search) ||
+      dept.description?.toLowerCase().includes(search)
+    );
+  });
+
+  const fetchDepartments = async (showRefresh = false) => {
     try {
-      console.log('📥 1. Fetching departments from API...');
+      if (showRefresh) setRefreshing(true);
+      else setLoading(true);
+
       const response = await api.get('/departments');
-      console.log('📥 2. API Response:', response);
-      console.log('📥 3. Response data:', response.data);
-
       const departmentsData = response.data?.data || [];
-      console.log('📥 4. Departments data:', departmentsData);
-
-      if (departmentsData.length > 0) {
-        setDepartments(departmentsData);
-        console.log('✅ 5. Departments set! Count:', departmentsData.length);
-      } else {
-        console.warn('⚠️ 6. No departments found');
-        setDepartments([]);
-      }
+      setDepartments(departmentsData);
+      setError('');
     } catch (err) {
-      console.error('❌ 7. Error:', err);
+      console.error('Failed to fetch departments:', err);
       setError(err.response?.data?.message || 'Failed to fetch departments');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -50,36 +61,24 @@ const Departments = () => {
     fetchDepartments();
   }, []);
 
-  useEffect(() => {
-    console.log('🔄 Departments state updated:', departments);
-    console.log('🔄 Departments count:', departments.length);
-  }, [departments]);
-
   const handleChange = e => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // Create Department
   const handleCreate = async e => {
     e.preventDefault();
     setError('');
 
     try {
-      console.log('📝 Creating department:', formData);
-      const response = await api.post('/departments', formData);
-      console.log('✅ Department created:', response.data);
-
+      await api.post('/departments', formData);
       setShowModal(false);
-      setFormData({ name: '', code: '', description: '' });
+      setFormData({ name: '', code: '', description: '', establishedYear: '' });
       await fetchDepartments();
-      alert('✅ Department added successfully!');
     } catch (err) {
-      console.error('❌ Error:', err);
       setError(err.response?.data?.message || 'Failed to create department');
     }
   };
 
-  // Delete Department
   const handleDelete = async id => {
     if (!isAdmin()) {
       setError('Only Admin can delete departments');
@@ -90,337 +89,422 @@ const Departments = () => {
       try {
         await api.delete(`/departments/${id}`);
         await fetchDepartments();
-        alert('✅ Department deleted successfully!');
       } catch (err) {
         setError('Failed to delete department');
       }
     }
   };
 
+  const clearSearch = () => {
+    setSearchTerm('');
+  };
+
+  const getRandomColor = id => {
+    const colors = [
+      { from: 'from-violet-500', to: 'to-purple-600', icon: 'text-purple-400' },
+      { from: 'from-blue-500', to: 'to-cyan-600', icon: 'text-blue-400' },
+      { from: 'from-emerald-500', to: 'to-teal-600', icon: 'text-emerald-400' },
+      { from: 'from-rose-500', to: 'to-pink-600', icon: 'text-rose-400' },
+      { from: 'from-amber-500', to: 'to-orange-600', icon: 'text-amber-400' },
+      { from: 'from-indigo-500', to: 'to-purple-600', icon: 'text-indigo-400' },
+    ];
+    const index = (id?.length || 0) % colors.length;
+    return colors[index];
+  };
+
   if (loading) {
     return (
-      <div style={{ color: 'white', textAlign: 'center', padding: '2rem' }}>
-        Loading...
+      <div className="flex items-center justify-center min-h-[70vh]">
+        <div className="text-center">
+          <div className="relative">
+            <div className="w-16 h-16 border-4 border-purple-500/20 border-t-purple-500 rounded-full animate-spin" />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <BuildingLibraryIcon className="w-6 h-6 text-purple-400/50 animate-pulse" />
+            </div>
+          </div>
+          <p className="text-gray-400 mt-4 font-medium">
+            Loading departments...
+          </p>
+          <p className="text-gray-500 text-sm mt-1">Please wait a moment</p>
+        </div>
       </div>
     );
   }
 
-  console.log('🔍 Rendering departments in UI:', departments);
-  console.log('🔍 Departments count in UI:', departments?.length);
-
   return (
-    <div style={{ padding: '1.5rem' }}>
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: '1.5rem',
-        }}
-      >
-        <div>
-          <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: 'white' }}>
-            Departments
-          </h1>
-          <p style={{ color: '#9ca3af', fontSize: '0.875rem' }}>
-            Role:{' '}
-            <span style={{ color: '#a78bfa', textTransform: 'capitalize' }}>
-              {user?.role}
-            </span>
-          </p>
-          <p style={{ color: '#6b7280', fontSize: '0.75rem' }}>
-            Total Departments: {departments?.length || 0}
-          </p>
-        </div>
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-900 to-black p-4 md:p-6">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="relative mb-10">
+          <div className="absolute -top-20 -right-20 w-64 h-64 bg-purple-500/10 rounded-full blur-3xl" />
+          <div className="absolute -bottom-20 -left-20 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl" />
 
-        {isAdmin() && (
-          <button
-            onClick={() => setShowModal(true)}
-            style={{
-              padding: '0.5rem 1.5rem',
-              background: 'linear-gradient(to right, #8b5cf6, #ec4899)',
-              color: 'white',
-              borderRadius: '0.5rem',
-              border: 'none',
-              cursor: 'pointer',
-              fontWeight: 'bold',
-            }}
-          >
-            + Add Department
-          </button>
-        )}
-      </div>
-
-      {error && (
-        <div
-          style={{
-            background: 'rgba(239, 68, 68, 0.2)',
-            color: '#f87171',
-            padding: '0.75rem',
-            borderRadius: '0.5rem',
-            marginBottom: '1rem',
-          }}
-        >
-          {error}
-        </div>
-      )}
-
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-          gap: '1.5rem',
-        }}
-      >
-        {departments && departments.length > 0 ? (
-          departments.map(dept => {
-            console.log('🔍 Rendering department:', dept);
-            return (
-              <div
-                key={dept._id}
-                style={{
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  backdropFilter: 'blur(20px)',
-                  borderRadius: '1rem',
-                  padding: '1.5rem',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  transition: 'all 0.3s ease',
-                }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.borderColor = 'rgba(139, 92, 246, 0.3)';
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.borderColor =
-                    'rgba(255, 255, 255, 0.1)';
-                }}
-              >
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'flex-start',
-                  }}
-                >
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.75rem',
-                    }}
-                  >
-                    <div
-                      style={{
-                        width: '3rem',
-                        height: '3rem',
-                        borderRadius: '0.75rem',
-                        background:
-                          'linear-gradient(to right, #f97316, #ef4444)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                    >
-                      <BuildingLibraryIcon
-                        style={{
-                          width: '1.5rem',
-                          height: '1.5rem',
-                          color: 'white',
-                        }}
-                      />
-                    </div>
-                    <div>
-                      <h3 style={{ color: 'white', fontWeight: '600' }}>
-                        {dept.name}
-                      </h3>
-                      <p style={{ color: '#9ca3af', fontSize: '0.875rem' }}>
-                        Code: {dept.code}
-                      </p>
-                    </div>
+          <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex items-start gap-4">
+              <div className="hidden md:flex w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-500/20 to-blue-500/20 border border-purple-500/20 items-center justify-center backdrop-blur-sm">
+                <BuildingLibraryIcon className="w-7 h-7 text-purple-400" />
+              </div>
+              <div>
+                <div className="flex items-center gap-3 flex-wrap">
+                  <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-purple-400 via-blue-400 to-purple-400 bg-clip-text text-transparent animate-gradient">
+                    Department Management
+                  </h1>
+                  <div className="flex items-center gap-1 px-3 py-1 bg-purple-500/20 rounded-full border border-purple-500/20">
+                    <SparklesIcon className="w-3.5 h-3.5 text-purple-400" />
+                    <span className="text-purple-400 text-xs font-medium">
+                      {departments.length} Departments
+                    </span>
                   </div>
-                  {isAdmin() && (
-                    <div style={{ display: 'flex', gap: '0.25rem' }}>
-                      <button
-                        onClick={() => handleDelete(dept._id)}
-                        style={{
-                          padding: '0.375rem',
-                          borderRadius: '0.5rem',
-                          background: 'transparent',
-                          color: '#f87171',
-                          border: 'none',
-                          cursor: 'pointer',
-                          transition: 'all 0.2s',
-                        }}
-                        onMouseEnter={e => {
-                          e.currentTarget.style.background =
-                            'rgba(239, 68, 68, 0.2)';
-                        }}
-                        onMouseLeave={e => {
-                          e.currentTarget.style.background = 'transparent';
-                        }}
-                      >
-                        <TrashIcon style={{ width: '1rem', height: '1rem' }} />
-                      </button>
-                    </div>
-                  )}
                 </div>
-                <div
-                  style={{
-                    marginTop: '1rem',
-                    paddingTop: '1rem',
-                    borderTop: '1px solid rgba(255, 255, 255, 0.1)',
-                    display: 'grid',
-                    gridTemplateColumns: '1fr 1fr',
-                    gap: '0.5rem',
-                    fontSize: '0.875rem',
-                  }}
-                >
-                  <div>
-                    <p style={{ color: '#6b7280' }}>Description</p>
-                    <p style={{ color: 'white', fontWeight: '600' }}>
-                      {dept.description || 'N/A'}
-                    </p>
-                  </div>
-                  <div>
-                    <p style={{ color: '#6b7280' }}>Established</p>
-                    <p style={{ color: 'white', fontWeight: '600' }}>
-                      {dept.establishedYear || 'N/A'}
-                    </p>
-                  </div>
+                <div className="flex flex-wrap items-center gap-3 mt-1.5">
+                  <p className="text-gray-400 text-sm flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />
+                    Manage all university departments and their details
+                  </p>
+                  <span className="hidden sm:flex text-xs text-gray-500">
+                    • {departments.length} total departments
+                  </span>
                 </div>
               </div>
-            );
-          })
-        ) : (
-          <div
-            style={{
-              gridColumn: '1 / -1',
-              textAlign: 'center',
-              padding: '3rem',
-              color: '#6b7280',
-              background: 'rgba(255, 255, 255, 0.05)',
-              borderRadius: '1rem',
-            }}
-          >
-            No departments found. Click "Add Department" to create one.
-          </div>
-        )}
-      </div>
+            </div>
 
-      {/* Add Department Modal */}
-      {showModal && isAdmin() && (
-        <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(0,0,0,0.7)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-          }}
-        >
-          <div
-            style={{
-              background: '#1a1a1a',
-              padding: '2rem',
-              borderRadius: '1rem',
-              maxWidth: '500px',
-              width: '90%',
-              border: '1px solid rgba(255,255,255,0.1)',
-            }}
-          >
-            <h2 style={{ color: 'white', marginBottom: '1rem' }}>
-              Add Department
-            </h2>
-            <form onSubmit={handleCreate}>
-              <input
-                name="name"
-                placeholder="Department Name *"
-                value={formData.name}
-                onChange={handleChange}
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  background: 'rgba(255,255,255,0.05)',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  borderRadius: '0.5rem',
-                  color: 'white',
-                  marginBottom: '0.75rem',
-                }}
-                required
-              />
-              <input
-                name="code"
-                placeholder="Department Code *"
-                value={formData.code}
-                onChange={handleChange}
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  background: 'rgba(255,255,255,0.05)',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  borderRadius: '0.5rem',
-                  color: 'white',
-                  marginBottom: '0.75rem',
-                }}
-                required
-              />
-              <input
-                name="description"
-                placeholder="Description"
-                value={formData.description}
-                onChange={handleChange}
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  background: 'rgba(255,255,255,0.05)',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  borderRadius: '0.5rem',
-                  color: 'white',
-                  marginBottom: '0.75rem',
-                }}
-              />
-              <div
-                style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem' }}
+            <div className="flex items-center gap-3 flex-wrap">
+              <button
+                onClick={() => fetchDepartments(true)}
+                disabled={refreshing}
+                className="flex items-center gap-2 px-4 py-2.5 bg-white/5 hover:bg-white/10 rounded-xl text-gray-300 hover:text-white transition-all duration-200 border border-white/10 hover:border-white/20 disabled:opacity-50 backdrop-blur-sm"
               >
+                <ArrowPathIcon
+                  className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`}
+                />
+                {refreshing ? 'Refreshing...' : 'Refresh'}
+              </button>
+              {isAdmin() && (
                 <button
-                  type="submit"
-                  style={{
-                    flex: 1,
-                    padding: '0.75rem',
-                    background: 'linear-gradient(to right, #8b5cf6, #ec4899)',
-                    color: 'white',
-                    borderRadius: '0.5rem',
-                    border: 'none',
-                    cursor: 'pointer',
-                    fontWeight: 'bold',
-                  }}
+                  onClick={() => setShowModal(true)}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-xl font-medium text-sm hover:scale-[1.02] transition-all duration-200 shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40"
                 >
+                  <PlusIcon className="w-5 h-5" />
                   Add Department
                 </button>
-                <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  style={{
-                    flex: 1,
-                    padding: '0.75rem',
-                    background: 'rgba(255,255,255,0.1)',
-                    color: 'white',
-                    borderRadius: '0.5rem',
-                    border: 'none',
-                    cursor: 'pointer',
-                  }}
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
+              )}
+            </div>
           </div>
         </div>
-      )}
+
+        {error && (
+          <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-xl mb-6 text-sm flex items-center gap-2">
+            <XMarkIcon className="w-5 h-5" />
+            {error}
+          </div>
+        )}
+
+        {/* Search Bar */}
+        <div className="relative max-w-md mb-6">
+          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+            <MagnifyingGlassIcon className="w-5 h-5 text-gray-400" />
+          </div>
+          <input
+            type="text"
+            placeholder="Search departments by name or code..."
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+            className="w-full pl-11 pr-12 py-3 bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl text-white text-sm placeholder-gray-400 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all duration-300"
+          />
+          {searchTerm && (
+            <button
+              onClick={clearSearch}
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 hover:bg-white/10 rounded-lg transition-colors duration-200 text-gray-400 hover:text-white group"
+            >
+              <XMarkIcon className="w-5 h-5 group-hover:rotate-90 transition-transform duration-300" />
+            </button>
+          )}
+        </div>
+
+        {/* Departments Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredDepartments.length > 0 ? (
+            filteredDepartments.map(dept => {
+              const colors = getRandomColor(dept._id);
+              return (
+                <div
+                  key={dept._id}
+                  className="group relative bg-white/5 backdrop-blur-xl rounded-2xl overflow-hidden border border-white/10 hover:border-purple-500/40 hover:scale-[1.02] transition-all duration-300 shadow-lg shadow-purple-500/5 hover:shadow-purple-500/20"
+                >
+                  {/* Header with gradient */}
+                  <div
+                    className={`relative bg-gradient-to-r ${colors.from} ${colors.to} p-5`}
+                  >
+                    <div className="absolute inset-0 bg-black/20" />
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-16 -mt-16" />
+                    <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full blur-xl -ml-12 -mb-12" />
+
+                    <div className="relative flex items-start justify-between">
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center shadow-lg shadow-black/20 flex-shrink-0">
+                          <BuildingLibraryIcon className="w-6 h-6 text-white" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-white font-bold text-lg truncate">
+                            {dept.name}
+                          </h3>
+                          <p className="text-white/80 text-sm font-medium">
+                            Code: {dept.code}
+                          </p>
+                        </div>
+                      </div>
+                      {isAdmin() && (
+                        <button
+                          onClick={() => handleDelete(dept._id)}
+                          className="p-1.5 rounded-lg bg-white/10 hover:bg-red-500/30 text-white/70 hover:text-red-400 transition-all duration-200 flex-shrink-0 ml-2"
+                        >
+                          <TrashIcon className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Content */}
+                  <div className="p-5">
+                    {dept.description && (
+                      <p className="text-gray-400 text-sm line-clamp-2 mb-4">
+                        {dept.description}
+                      </p>
+                    )}
+
+                    <div className="grid grid-cols-2 gap-2.5">
+                      <div className="bg-white/5 rounded-xl p-2.5 hover:bg-white/10 transition-all duration-200">
+                        <p className="text-gray-500 text-[10px] uppercase tracking-wider font-medium">
+                          Code
+                        </p>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <BuildingLibraryIcon
+                            className={`w-3.5 h-3.5 ${colors.icon}`}
+                          />
+                          <p className="text-white text-sm font-medium">
+                            {dept.code}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="bg-white/5 rounded-xl p-2.5 hover:bg-white/10 transition-all duration-200">
+                        <p className="text-gray-500 text-[10px] uppercase tracking-wider font-medium">
+                          Established
+                        </p>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <CalendarIcon className="w-3.5 h-3.5 text-emerald-400" />
+                          <p className="text-white text-sm font-medium">
+                            {dept.establishedYear || 'N/A'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Footer with stats */}
+                    <div className="mt-3.5 pt-3.5 border-t border-white/5 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <UserGroupIcon className="w-4 h-4 text-gray-500" />
+                        <span className="text-gray-400 text-xs">
+                          {dept.courses?.length || 0} Courses
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <UserGroupIcon className="w-4 h-4 text-gray-500" />
+                        <span className="text-gray-400 text-xs">
+                          {dept.students?.length || 0} Students
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          ) : (
+            <div className="col-span-full">
+              <div className="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 p-12 text-center">
+                <div className="w-20 h-20 bg-white/5 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                  <BuildingLibraryIcon className="w-10 h-10 text-gray-600" />
+                </div>
+                <p className="text-gray-400 text-lg font-medium">
+                  {searchTerm
+                    ? 'No departments match your search'
+                    : 'No departments found'}
+                </p>
+                <p className="text-gray-500 text-sm mt-1">
+                  {searchTerm
+                    ? 'Try adjusting your search terms'
+                    : 'Click "Add Department" to create your first department'}
+                </p>
+                {searchTerm && (
+                  <button
+                    onClick={clearSearch}
+                    className="mt-4 px-6 py-2 bg-purple-500/20 hover:bg-purple-500/30 rounded-lg text-purple-400 text-sm transition-all duration-200"
+                  >
+                    Clear search
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        {departments.length > 0 && (
+          <div className="mt-6 flex flex-wrap items-center justify-between gap-3 text-gray-400 text-sm bg-white/5 rounded-xl px-4 py-3 border border-white/5">
+            <p>
+              Showing{' '}
+              <span className="text-white font-medium">
+                {filteredDepartments.length}
+              </span>{' '}
+              of{' '}
+              <span className="text-white font-medium">
+                {departments.length}
+              </span>{' '}
+              departments
+            </p>
+            <div className="flex items-center gap-4">
+              <span className="flex items-center gap-1.5 text-purple-400">
+                <BuildingLibraryIcon className="w-4 h-4" />
+                Total: <span className="font-medium">{departments.length}</span>
+              </span>
+              <span className="flex items-center gap-1.5 text-blue-400">
+                <ChartBarIcon className="w-4 h-4" />
+                Active:{' '}
+                <span className="font-medium">
+                  {departments.filter(d => d.status !== 'inactive').length}
+                </span>
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Add Department Modal */}
+        {showModal && isAdmin() && (
+          <div
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn"
+            onClick={e => e.target === e.currentTarget && setShowModal(false)}
+          >
+            <div className="bg-gray-900 rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto border border-white/10 shadow-2xl">
+              <div className="sticky top-0 bg-gray-900/95 backdrop-blur-sm border-b border-white/10 px-6 py-4 flex items-center justify-between">
+                <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                  <PlusIcon className="w-5 h-5 text-purple-400" />
+                  Add New Department
+                </h2>
+                <button
+                  onClick={() => setShowModal(false)}
+                  className="p-1.5 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white transition"
+                >
+                  <XMarkIcon className="w-6 h-6" />
+                </button>
+              </div>
+
+              <form onSubmit={handleCreate} className="p-6 space-y-4">
+                <div>
+                  <label className="block text-gray-400 text-sm font-medium mb-1.5">
+                    Department Name *
+                  </label>
+                  <input
+                    name="name"
+                    placeholder="e.g., Computer Science & Engineering"
+                    value={formData.name}
+                    onChange={handleChange}
+                    className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:border-purple-500 transition"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-gray-400 text-sm font-medium mb-1.5">
+                    Department Code *
+                  </label>
+                  <input
+                    name="code"
+                    placeholder="e.g., CSE"
+                    value={formData.code}
+                    onChange={handleChange}
+                    className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:border-purple-500 transition"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-gray-400 text-sm font-medium mb-1.5">
+                    Description
+                  </label>
+                  <input
+                    name="description"
+                    placeholder="Brief description of the department"
+                    value={formData.description}
+                    onChange={handleChange}
+                    className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:border-purple-500 transition"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-gray-400 text-sm font-medium mb-1.5">
+                    Established Year
+                  </label>
+                  <input
+                    name="establishedYear"
+                    type="number"
+                    placeholder="e.g., 2010"
+                    value={formData.establishedYear}
+                    onChange={handleChange}
+                    className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:border-purple-500 transition"
+                  />
+                </div>
+
+                {error && (
+                  <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-2 rounded-lg text-sm">
+                    {error}
+                  </div>
+                )}
+
+                <div className="flex gap-3 pt-2">
+                  <button
+                    type="submit"
+                    className="flex-1 px-4 py-2.5 bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-lg font-medium hover:scale-[1.02] transition-all duration-200 shadow-lg shadow-purple-500/25"
+                  >
+                    Add Department
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowModal(false)}
+                    className="flex-1 px-4 py-2.5 bg-white/5 text-white rounded-lg font-medium hover:bg-white/10 transition"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* CSS */}
+        <style>{`
+          @keyframes gradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+          }
+          .animate-gradient {
+            background-size: 200% auto;
+            animation: gradient 3s ease infinite;
+          }
+          @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+          }
+          .animate-fadeIn {
+            animation: fadeIn 0.2s ease-out;
+          }
+          .line-clamp-2 {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+          }
+        `}</style>
+      </div>
     </div>
   );
 };

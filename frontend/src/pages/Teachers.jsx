@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import {
@@ -7,6 +7,14 @@ import {
   MagnifyingGlassIcon,
   TrashIcon,
   XMarkIcon,
+  ArrowPathIcon,
+  ChartBarIcon,
+  SparklesIcon,
+  EnvelopeIcon,
+  BuildingLibraryIcon,
+  UserGroupIcon,
+  CalendarIcon,
+  BriefcaseIcon,
 } from '@heroicons/react/24/outline';
 
 const Teachers = () => {
@@ -14,6 +22,7 @@ const Teachers = () => {
   const [teachers, setTeachers] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -32,7 +41,6 @@ const Teachers = () => {
     },
   });
 
-  // Filter teachers based on search
   const filteredTeachers = teachers.filter(teacher => {
     const search = searchTerm.toLowerCase();
     return (
@@ -43,46 +51,28 @@ const Teachers = () => {
     );
   });
 
-  // Fetch Teachers
-  const fetchTeachers = async () => {
+  const fetchTeachers = async (showRefresh = false) => {
     try {
-      console.log('📥 1. Fetching teachers started...');
-      const token = localStorage.getItem('token');
-      console.log('📥 2. Token exists?', token ? 'Yes' : 'No');
+      if (showRefresh) setRefreshing(true);
+      else setLoading(true);
 
       const response = await api.get('/teachers');
-      console.log('📥 3. Response status:', response.status);
-      console.log('📥 4. Response data:', response.data);
-      console.log(
-        '📥 5. Teachers array:',
-        response.data?.teachers || response.data?.data,
-      );
-
       const teachersData = response.data?.teachers || response.data?.data || [];
-
-      if (teachersData.length > 0) {
-        setTeachers(teachersData);
-        console.log('✅ 6. Teachers set! Count:', teachersData.length);
-      } else {
-        console.warn('⚠️ 7. No teachers found');
-        setTeachers([]);
-      }
+      setTeachers(teachersData);
+      setError('');
     } catch (err) {
-      console.error('❌ 8. Error:', err);
-      console.error('❌ 9. Error response:', err.response?.data);
+      console.error('Failed to fetch teachers:', err);
       setError(err.response?.data?.message || 'Failed to fetch teachers');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
-  // Fetch Departments
   const fetchDepartments = async () => {
     try {
-      console.log('📥 Fetching departments...');
       const response = await api.get('/departments');
       setDepartments(response.data.data || []);
-      console.log('✅ Departments loaded:', response.data.data?.length || 0);
     } catch (err) {
       console.error('Failed to fetch departments');
     }
@@ -92,12 +82,6 @@ const Teachers = () => {
     fetchTeachers();
     fetchDepartments();
   }, []);
-
-  // Log state changes
-  useEffect(() => {
-    console.log('🔄 Teachers state updated:', teachers);
-    console.log('🔄 Teachers count:', teachers.length);
-  }, [teachers]);
 
   const handleChange = e => {
     const { name, value } = e.target;
@@ -112,7 +96,6 @@ const Teachers = () => {
     }
   };
 
-  // Create Teacher
   const handleCreate = async e => {
     e.preventDefault();
     setError('');
@@ -123,8 +106,6 @@ const Teachers = () => {
     }
 
     try {
-      console.log('📝 1. Creating teacher with data:', formData);
-
       const teacherData = {
         ...formData,
         specialization: formData.specialization
@@ -132,11 +113,7 @@ const Teachers = () => {
           : [],
       };
 
-      console.log('📝 2. Teacher data to send:', teacherData);
-
-      const response = await api.post('/teachers', teacherData);
-      console.log('✅ 3. Teacher created:', response.data);
-
+      await api.post('/teachers', teacherData);
       setShowModal(false);
       setFormData({
         name: '',
@@ -149,18 +126,12 @@ const Teachers = () => {
         specialization: '',
         office: { room: '', building: '' },
       });
-
-      console.log('📥 4. Refreshing teacher list...');
       await fetchTeachers();
-      alert('✅ Teacher added successfully!');
     } catch (err) {
-      console.error('❌ 5. Error:', err);
-      console.error('❌ 6. Error response:', err.response?.data);
       setError(err.response?.data?.message || 'Failed to create teacher');
     }
   };
 
-  // Delete Teacher
   const handleDelete = async id => {
     if (!isAdmin()) {
       setError('Only Admin can delete teachers');
@@ -171,906 +142,575 @@ const Teachers = () => {
       try {
         await api.delete(`/teachers/${id}`);
         await fetchTeachers();
-        alert('✅ Teacher deleted successfully!');
       } catch (err) {
         setError('Failed to delete teacher');
       }
     }
   };
 
+  const clearSearch = () => {
+    setSearchTerm('');
+  };
+
+  const getRandomColor = id => {
+    const colors = [
+      { from: 'from-violet-500', to: 'to-purple-600' },
+      { from: 'from-blue-500', to: 'to-cyan-600' },
+      { from: 'from-emerald-500', to: 'to-teal-600' },
+      { from: 'from-rose-500', to: 'to-pink-600' },
+      { from: 'from-amber-500', to: 'to-orange-600' },
+      { from: 'from-indigo-500', to: 'to-purple-600' },
+    ];
+    const index = (id?.length || 0) % colors.length;
+    return colors[index];
+  };
+
+  const getInitials = name => {
+    if (!name) return 'T';
+    return name.charAt(0).toUpperCase();
+  };
+
   if (loading) {
     return (
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          height: '100vh',
-          color: 'white',
-        }}
-      >
-        <div style={{ textAlign: 'center' }}>
-          <div
-            style={{
-              width: '40px',
-              height: '40px',
-              border: '3px solid rgba(139, 92, 246, 0.2)',
-              borderTop: '3px solid #8b5cf6',
-              borderRadius: '50%',
-              animation: 'spin 1s linear infinite',
-              margin: '0 auto 1rem',
-            }}
-          />
-          <p style={{ color: '#9ca3af' }}>Loading teachers...</p>
+      <div className="flex items-center justify-center min-h-[70vh]">
+        <div className="text-center">
+          <div className="relative">
+            <div className="w-16 h-16 border-4 border-purple-500/20 border-t-purple-500 rounded-full animate-spin" />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <AcademicCapIcon className="w-6 h-6 text-purple-400/50 animate-pulse" />
+            </div>
+          </div>
+          <p className="text-gray-400 mt-4 font-medium">Loading teachers...</p>
+          <p className="text-gray-500 text-sm mt-1">Please wait a moment</p>
         </div>
       </div>
     );
   }
 
-  console.log('🔍 Rendering teachers in UI:', teachers);
-  console.log('🔍 Teachers count in UI:', teachers?.length);
-
   return (
-    <div style={{ padding: '1.5rem', maxWidth: '1400px', margin: '0 auto' }}>
-      {/* Header */}
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '1rem',
-          marginBottom: '2rem',
-        }}
-      >
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            flexWrap: 'wrap',
-            gap: '1rem',
-          }}
-        >
-          <div>
-            <h1
-              style={{
-                fontSize: '2rem',
-                fontWeight: 'bold',
-                color: 'white',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.75rem',
-              }}
-            >
-              <span>Teachers</span>
-              <span
-                style={{
-                  fontSize: '0.875rem',
-                  background: 'rgba(139, 92, 246, 0.2)',
-                  color: '#a78bfa',
-                  padding: '0.25rem 0.75rem',
-                  borderRadius: '9999px',
-                  fontWeight: 'normal',
-                }}
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-900 to-black p-4 md:p-6">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="relative mb-10">
+          <div className="absolute -top-20 -right-20 w-64 h-64 bg-purple-500/10 rounded-full blur-3xl" />
+          <div className="absolute -bottom-20 -left-20 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl" />
+
+          <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex items-start gap-4">
+              <div className="hidden md:flex w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-500/20 to-blue-500/20 border border-purple-500/20 items-center justify-center backdrop-blur-sm">
+                <AcademicCapIcon className="w-7 h-7 text-purple-400" />
+              </div>
+              <div>
+                <div className="flex items-center gap-3 flex-wrap">
+                  <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-purple-400 via-blue-400 to-purple-400 bg-clip-text text-transparent animate-gradient">
+                    Teacher Management
+                  </h1>
+                  <div className="flex items-center gap-1 px-3 py-1 bg-purple-500/20 rounded-full border border-purple-500/20">
+                    <SparklesIcon className="w-3.5 h-3.5 text-purple-400" />
+                    <span className="text-purple-400 text-xs font-medium">
+                      {teachers.length} Teachers
+                    </span>
+                  </div>
+                </div>
+                <div className="flex flex-wrap items-center gap-3 mt-1.5">
+                  <p className="text-gray-400 text-sm flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />
+                    Manage all faculty members and their details
+                  </p>
+                  <span className="hidden sm:flex text-xs text-gray-500">
+                    • {teachers.filter(t => t.status !== 'inactive').length}{' '}
+                    active
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 flex-wrap">
+              <button
+                onClick={() => fetchTeachers(true)}
+                disabled={refreshing}
+                className="flex items-center gap-2 px-4 py-2.5 bg-white/5 hover:bg-white/10 rounded-xl text-gray-300 hover:text-white transition-all duration-200 border border-white/10 hover:border-white/20 disabled:opacity-50 backdrop-blur-sm"
               >
-                {teachers.length}
-              </span>
-            </h1>
-            <p
-              style={{
-                color: '#9ca3af',
-                fontSize: '0.875rem',
-                marginTop: '0.25rem',
-              }}
-            >
-              Role:{' '}
-              <span style={{ color: '#a78bfa', textTransform: 'capitalize' }}>
-                {user?.role}
-              </span>
-            </p>
+                <ArrowPathIcon
+                  className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`}
+                />
+                {refreshing ? 'Refreshing...' : 'Refresh'}
+              </button>
+              {isAdmin() && (
+                <button
+                  onClick={() => setShowModal(true)}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-xl font-medium text-sm hover:scale-[1.02] transition-all duration-200 shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40"
+                >
+                  <UserPlusIcon className="w-5 h-5" />
+                  Add Teacher
+                </button>
+              )}
+            </div>
           </div>
-          {isAdmin() && (
-            <button
-              onClick={() => setShowModal(true)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                padding: '0.6rem 1.5rem',
-                background: 'linear-gradient(135deg, #8b5cf6, #ec4899)',
-                color: 'white',
-                borderRadius: '0.5rem',
-                border: 'none',
-                cursor: 'pointer',
-                fontWeight: '600',
-                fontSize: '0.875rem',
-                transition: 'all 0.3s ease',
-                boxShadow: '0 4px 15px rgba(139, 92, 246, 0.3)',
-              }}
-              onMouseEnter={e => {
-                e.currentTarget.style.transform = 'translateY(-2px)';
-                e.currentTarget.style.boxShadow =
-                  '0 6px 25px rgba(139, 92, 246, 0.4)';
-              }}
-              onMouseLeave={e => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow =
-                  '0 4px 15px rgba(139, 92, 246, 0.3)';
-              }}
-            >
-              <UserPlusIcon style={{ width: '1.25rem', height: '1.25rem' }} />
-              <span>Add Teacher</span>
-            </button>
-          )}
         </div>
 
+        {error && (
+          <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-xl mb-6 text-sm flex items-center gap-2">
+            <XMarkIcon className="w-5 h-5" />
+            {error}
+          </div>
+        )}
+
         {/* Search Bar */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.75rem',
-            background: 'rgba(255, 255, 255, 0.05)',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
-            borderRadius: '0.5rem',
-            padding: '0.5rem 1rem',
-            maxWidth: '400px',
-            transition: 'all 0.3s ease',
-          }}
-        >
-          <MagnifyingGlassIcon
-            style={{ width: '1.25rem', height: '1.25rem', color: '#6b7280' }}
-          />
+        <div className="relative max-w-md mb-6">
+          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+            <MagnifyingGlassIcon className="w-5 h-5 text-gray-400" />
+          </div>
           <input
             type="text"
-            placeholder="Search teachers..."
+            placeholder="Search teachers by name, ID, or designation..."
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
-            style={{
-              flex: 1,
-              background: 'transparent',
-              border: 'none',
-              outline: 'none',
-              color: 'white',
-              fontSize: '0.875rem',
-              padding: '0.25rem 0',
-            }}
+            className="w-full pl-11 pr-12 py-3 bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl text-white text-sm placeholder-gray-400 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all duration-300"
           />
           {searchTerm && (
             <button
-              onClick={() => setSearchTerm('')}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                color: '#6b7280',
-                cursor: 'pointer',
-                padding: '0.25rem',
-              }}
+              onClick={clearSearch}
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 hover:bg-white/10 rounded-lg transition-colors duration-200 text-gray-400 hover:text-white group"
             >
-              <XMarkIcon style={{ width: '1.25rem', height: '1.25rem' }} />
+              <XMarkIcon className="w-5 h-5 group-hover:rotate-90 transition-transform duration-300" />
             </button>
           )}
         </div>
-      </div>
 
-      {error && (
-        <div
-          style={{
-            background: 'rgba(239, 68, 68, 0.15)',
-            color: '#f87171',
-            padding: '0.75rem 1rem',
-            borderRadius: '0.5rem',
-            marginBottom: '1rem',
-            fontSize: '0.875rem',
-            border: '1px solid rgba(239, 68, 68, 0.2)',
-          }}
-        >
-          {error}
-        </div>
-      )}
-
-      {/* Teachers Grid */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
-          gap: '1.25rem',
-        }}
-      >
-        {filteredTeachers && filteredTeachers.length > 0 ? (
-          filteredTeachers.map(teacher => (
-            <div
-              key={teacher._id}
-              style={{
-                background: 'rgba(255, 255, 255, 0.03)',
-                backdropFilter: 'blur(20px)',
-                borderRadius: '1rem',
-                border: '1px solid rgba(255, 255, 255, 0.06)',
-                padding: '1.5rem',
-                transition: 'all 0.3s ease',
-                position: 'relative',
-                overflow: 'hidden',
-              }}
-              onMouseEnter={e => {
-                e.currentTarget.style.borderColor = 'rgba(139, 92, 246, 0.3)';
-                e.currentTarget.style.transform = 'translateY(-4px)';
-                e.currentTarget.style.boxShadow =
-                  '0 12px 30px rgba(0, 0, 0, 0.3)';
-              }}
-              onMouseLeave={e => {
-                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.06)';
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = 'none';
-              }}
-            >
-              {/* Decorative gradient line */}
-              <div
-                style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  height: '3px',
-                  background: 'linear-gradient(90deg, #8b5cf6, #ec4899)',
-                  opacity: 0.5,
-                }}
-              />
-
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  justifyContent: 'space-between',
-                }}
-              >
+        {/* Teachers Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredTeachers.length > 0 ? (
+            filteredTeachers.map(teacher => {
+              const colors = getRandomColor(teacher._id);
+              return (
                 <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.75rem',
-                  }}
+                  key={teacher._id}
+                  className="group relative bg-white/5 backdrop-blur-xl rounded-2xl overflow-hidden border border-white/10 hover:border-purple-500/40 hover:scale-[1.02] transition-all duration-300 shadow-lg shadow-purple-500/5 hover:shadow-purple-500/20"
                 >
+                  {/* Header with gradient */}
                   <div
-                    style={{
-                      width: '3rem',
-                      height: '3rem',
-                      borderRadius: '50%',
-                      background: `linear-gradient(135deg, ${teacher._id ? '#8b5cf6' : '#6b7280'}, ${teacher._id ? '#ec4899' : '#4b5563'})`,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: 'white',
-                      fontSize: '1rem',
-                      fontWeight: '600',
-                      flexShrink: 0,
-                    }}
+                    className={`relative bg-gradient-to-r ${colors.from} ${colors.to} p-5`}
                   >
-                    {teacher.user?.name?.charAt(0) || 'T'}
+                    <div className="absolute inset-0 bg-black/20" />
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-16 -mt-16" />
+                    <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full blur-xl -ml-12 -mb-12" />
+
+                    <div className="relative flex items-start justify-between">
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center shadow-lg shadow-black/20 flex-shrink-0">
+                          <span className="text-white font-bold text-lg">
+                            {getInitials(teacher.user?.name)}
+                          </span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-white font-bold text-lg truncate">
+                            {teacher.user?.name || 'N/A'}
+                          </h3>
+                          <p className="text-white/80 text-sm font-medium">
+                            {teacher.designation}
+                          </p>
+                        </div>
+                      </div>
+                      {isAdmin() && (
+                        <button
+                          onClick={() => handleDelete(teacher._id)}
+                          className="p-1.5 rounded-lg bg-white/10 hover:bg-red-500/30 text-white/70 hover:text-red-400 transition-all duration-200 flex-shrink-0 ml-2"
+                        >
+                          <TrashIcon className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
                   </div>
-                  <div>
-                    <h3
-                      style={{
-                        color: 'white',
-                        fontWeight: '600',
-                        fontSize: '1rem',
-                      }}
-                    >
-                      {teacher.user?.name || 'N/A'}
-                    </h3>
-                    <p style={{ color: '#9ca3af', fontSize: '0.75rem' }}>
-                      {teacher.designation}
-                    </p>
+
+                  {/* Content */}
+                  <div className="p-5">
+                    {teacher.bio && (
+                      <p className="text-gray-400 text-sm line-clamp-2 mb-4">
+                        "{teacher.bio}"
+                      </p>
+                    )}
+
+                    <div className="grid grid-cols-2 gap-2.5">
+                      <div className="bg-white/5 rounded-xl p-2.5 hover:bg-white/10 transition-all duration-200">
+                        <p className="text-gray-500 text-[10px] uppercase tracking-wider font-medium">
+                          Employee ID
+                        </p>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <BriefcaseIcon className="w-3.5 h-3.5 text-purple-400" />
+                          <p className="text-white text-sm font-medium truncate">
+                            {teacher.employeeId}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="bg-white/5 rounded-xl p-2.5 hover:bg-white/10 transition-all duration-200">
+                        <p className="text-gray-500 text-[10px] uppercase tracking-wider font-medium">
+                          Department
+                        </p>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <BuildingLibraryIcon className="w-3.5 h-3.5 text-blue-400" />
+                          <p className="text-white text-sm font-medium truncate">
+                            {teacher.department?.name || 'N/A'}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="col-span-2 bg-white/5 rounded-xl p-2.5 hover:bg-white/10 transition-all duration-200">
+                        <p className="text-gray-500 text-[10px] uppercase tracking-wider font-medium">
+                          Email
+                        </p>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <EnvelopeIcon className="w-3.5 h-3.5 text-emerald-400" />
+                          <p className="text-white text-sm font-medium truncate">
+                            {teacher.user?.email || 'N/A'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {teacher.specialization &&
+                      teacher.specialization.length > 0 && (
+                        <div className="mt-3.5 pt-3.5 border-t border-white/5">
+                          <p className="text-gray-500 text-[10px] uppercase tracking-wider font-medium mb-1.5">
+                            Specializations
+                          </p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {teacher.specialization.map((spec, idx) => (
+                              <span
+                                key={idx}
+                                className="px-2.5 py-1 bg-purple-500/15 text-purple-400 rounded-lg text-[10px] font-medium border border-purple-500/20"
+                              >
+                                {spec}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                    {(teacher.office?.room || teacher.office?.building) && (
+                      <div className="mt-3 pt-3 border-t border-white/5 flex items-center gap-2 text-gray-400 text-xs">
+                        <AcademicCapIcon className="w-3.5 h-3.5 text-gray-500" />
+                        <span>
+                          Office:{' '}
+                          {teacher.office?.room &&
+                            `Room ${teacher.office.room}`}
+                          {teacher.office?.room &&
+                            teacher.office?.building &&
+                            ' • '}
+                          {teacher.office?.building && teacher.office.building}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
-                {isAdmin() && (
+              );
+            })
+          ) : (
+            <div className="col-span-full">
+              <div className="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 p-12 text-center">
+                <div className="w-20 h-20 bg-white/5 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                  <AcademicCapIcon className="w-10 h-10 text-gray-600" />
+                </div>
+                <p className="text-gray-400 text-lg font-medium">
+                  {searchTerm
+                    ? 'No teachers match your search'
+                    : 'No teachers found'}
+                </p>
+                <p className="text-gray-500 text-sm mt-1">
+                  {searchTerm
+                    ? 'Try adjusting your search terms'
+                    : 'Click "Add Teacher" to create your first teacher profile'}
+                </p>
+                {searchTerm && (
                   <button
-                    onClick={() => handleDelete(teacher._id)}
-                    style={{
-                      padding: '0.3rem',
-                      borderRadius: '0.375rem',
-                      background: 'transparent',
-                      color: '#6b7280',
-                      border: 'none',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease',
-                    }}
-                    onMouseEnter={e => {
-                      e.currentTarget.style.color = '#f87171';
-                      e.currentTarget.style.background =
-                        'rgba(239, 68, 68, 0.1)';
-                    }}
-                    onMouseLeave={e => {
-                      e.currentTarget.style.color = '#6b7280';
-                      e.currentTarget.style.background = 'transparent';
-                    }}
+                    onClick={clearSearch}
+                    className="mt-4 px-6 py-2 bg-purple-500/20 hover:bg-purple-500/30 rounded-lg text-purple-400 text-sm transition-all duration-200"
                   >
-                    <TrashIcon style={{ width: '1rem', height: '1rem' }} />
+                    Clear search
                   </button>
                 )}
               </div>
-
-              <div
-                style={{
-                  marginTop: '0.75rem',
-                  padding: '0.75rem',
-                  background: 'rgba(255, 255, 255, 0.03)',
-                  borderRadius: '0.5rem',
-                  display: 'grid',
-                  gridTemplateColumns: '1fr 1fr',
-                  gap: '0.5rem',
-                  fontSize: '0.75rem',
-                }}
-              >
-                <div>
-                  <p style={{ color: '#6b7280' }}>Employee ID</p>
-                  <p style={{ color: '#d1d5db', fontWeight: '500' }}>
-                    {teacher.employeeId}
-                  </p>
-                </div>
-                <div>
-                  <p style={{ color: '#6b7280' }}>Department</p>
-                  <p style={{ color: '#d1d5db', fontWeight: '500' }}>
-                    {teacher.department?.name || 'N/A'}
-                  </p>
-                </div>
-                <div style={{ gridColumn: '1 / -1' }}>
-                  <p style={{ color: '#6b7280' }}>Email</p>
-                  <p
-                    style={{
-                      color: '#d1d5db',
-                      fontWeight: '500',
-                      wordBreak: 'break-all',
-                    }}
-                  >
-                    {teacher.user?.email || 'N/A'}
-                  </p>
-                </div>
-                {teacher.specialization &&
-                  teacher.specialization.length > 0 && (
-                    <div style={{ gridColumn: '1 / -1' }}>
-                      <p style={{ color: '#6b7280' }}>Specialization</p>
-                      <div
-                        style={{
-                          display: 'flex',
-                          flexWrap: 'wrap',
-                          gap: '0.25rem',
-                          marginTop: '0.25rem',
-                        }}
-                      >
-                        {teacher.specialization.map((spec, idx) => (
-                          <span
-                            key={idx}
-                            style={{
-                              padding: '0.125rem 0.5rem',
-                              background: 'rgba(139, 92, 246, 0.15)',
-                              color: '#a78bfa',
-                              borderRadius: '9999px',
-                              fontSize: '0.625rem',
-                            }}
-                          >
-                            {spec}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-              </div>
-
-              {teacher.bio && (
-                <p
-                  style={{
-                    marginTop: '0.75rem',
-                    color: '#9ca3af',
-                    fontSize: '0.75rem',
-                    fontStyle: 'italic',
-                    borderTop: '1px solid rgba(255, 255, 255, 0.04)',
-                    paddingTop: '0.75rem',
-                  }}
-                >
-                  "{teacher.bio}"
-                </p>
-              )}
             </div>
-          ))
-        ) : (
-          <div
-            style={{
-              gridColumn: '1 / -1',
-              textAlign: 'center',
-              padding: '3rem',
-              color: '#6b7280',
-              background: 'rgba(255, 255, 255, 0.03)',
-              borderRadius: '1rem',
-              border: '1px dashed rgba(255, 255, 255, 0.06)',
-            }}
-          >
-            {searchTerm
-              ? 'No teachers match your search'
-              : 'No teachers found. Click "Add Teacher" to create one.'}
+          )}
+        </div>
+
+        {/* Footer */}
+        {teachers.length > 0 && (
+          <div className="mt-6 flex flex-wrap items-center justify-between gap-3 text-gray-400 text-sm bg-white/5 rounded-xl px-4 py-3 border border-white/5">
+            <p>
+              Showing{' '}
+              <span className="text-white font-medium">
+                {filteredTeachers.length}
+              </span>{' '}
+              of{' '}
+              <span className="text-white font-medium">{teachers.length}</span>{' '}
+              teachers
+            </p>
+            <div className="flex items-center gap-4">
+              <span className="flex items-center gap-1.5 text-purple-400">
+                <AcademicCapIcon className="w-4 h-4" />
+                Total: <span className="font-medium">{teachers.length}</span>
+              </span>
+              <span className="flex items-center gap-1.5 text-emerald-400">
+                <UserGroupIcon className="w-4 h-4" />
+                Active:{' '}
+                <span className="font-medium">
+                  {teachers.filter(t => t.status !== 'inactive').length}
+                </span>
+              </span>
+            </div>
           </div>
         )}
-      </div>
 
-      {/* Add Teacher Modal */}
-      {showModal && isAdmin() && (
-        <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(0, 0, 0, 0.7)',
-            backdropFilter: 'blur(4px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-            padding: '1rem',
-            animation: 'fadeIn 0.3s ease',
-          }}
-        >
+        {/* Add Teacher Modal */}
+        {showModal && isAdmin() && (
           <div
-            style={{
-              background: '#1a1a1a',
-              borderRadius: '1rem',
-              maxWidth: '560px',
-              width: '100%',
-              maxHeight: '90vh',
-              overflow: 'auto',
-              border: '1px solid rgba(255, 255, 255, 0.06)',
-              padding: '2rem',
-              boxShadow: '0 25px 50px rgba(0, 0, 0, 0.5)',
-            }}
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn"
+            onClick={e => e.target === e.currentTarget && setShowModal(false)}
           >
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                marginBottom: '1.5rem',
-              }}
-            >
-              <h2
-                style={{
-                  color: 'white',
-                  fontSize: '1.25rem',
-                  fontWeight: 'bold',
-                }}
-              >
-                Add New Teacher
-              </h2>
-              <button
-                onClick={() => setShowModal(false)}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  color: '#6b7280',
-                  cursor: 'pointer',
-                  padding: '0.25rem',
-                  borderRadius: '0.375rem',
-                  transition: 'all 0.2s ease',
-                }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.background =
-                    'rgba(255, 255, 255, 0.05)';
-                  e.currentTarget.style.color = 'white';
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.background = 'transparent';
-                  e.currentTarget.style.color = '#6b7280';
-                }}
-              >
-                <XMarkIcon style={{ width: '1.5rem', height: '1.5rem' }} />
-              </button>
-            </div>
-
-            <form onSubmit={handleCreate}>
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr 1fr',
-                  gap: '0.75rem',
-                }}
-              >
-                <input
-                  name="name"
-                  placeholder="Full Name *"
-                  value={formData.name}
-                  onChange={handleChange}
-                  style={{
-                    gridColumn: '1 / -1',
-                    padding: '0.75rem',
-                    background: 'rgba(255,255,255,0.05)',
-                    border: '1px solid rgba(255,255,255,0.06)',
-                    borderRadius: '0.5rem',
-                    color: 'white',
-                    outline: 'none',
-                    fontSize: '0.875rem',
-                    transition: 'all 0.2s ease',
-                  }}
-                  onFocus={e => {
-                    e.currentTarget.style.borderColor = '#8b5cf6';
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
-                  }}
-                  onBlur={e => {
-                    e.currentTarget.style.borderColor =
-                      'rgba(255,255,255,0.06)';
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
-                  }}
-                  required
-                />
-                <input
-                  name="email"
-                  type="email"
-                  placeholder="Email *"
-                  value={formData.email}
-                  onChange={handleChange}
-                  style={{
-                    gridColumn: '1 / -1',
-                    padding: '0.75rem',
-                    background: 'rgba(255,255,255,0.05)',
-                    border: '1px solid rgba(255,255,255,0.06)',
-                    borderRadius: '0.5rem',
-                    color: 'white',
-                    outline: 'none',
-                    fontSize: '0.875rem',
-                    transition: 'all 0.2s ease',
-                  }}
-                  onFocus={e => {
-                    e.currentTarget.style.borderColor = '#8b5cf6';
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
-                  }}
-                  onBlur={e => {
-                    e.currentTarget.style.borderColor =
-                      'rgba(255,255,255,0.06)';
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
-                  }}
-                  required
-                />
-                <input
-                  name="password"
-                  type="password"
-                  placeholder="Password *"
-                  value={formData.password}
-                  onChange={handleChange}
-                  style={{
-                    gridColumn: '1 / -1',
-                    padding: '0.75rem',
-                    background: 'rgba(255,255,255,0.05)',
-                    border: '1px solid rgba(255,255,255,0.06)',
-                    borderRadius: '0.5rem',
-                    color: 'white',
-                    outline: 'none',
-                    fontSize: '0.875rem',
-                    transition: 'all 0.2s ease',
-                  }}
-                  onFocus={e => {
-                    e.currentTarget.style.borderColor = '#8b5cf6';
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
-                  }}
-                  onBlur={e => {
-                    e.currentTarget.style.borderColor =
-                      'rgba(255,255,255,0.06)';
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
-                  }}
-                  required
-                />
-                <input
-                  name="employeeId"
-                  placeholder="Employee ID *"
-                  value={formData.employeeId}
-                  onChange={handleChange}
-                  style={{
-                    gridColumn: '1 / -1',
-                    padding: '0.75rem',
-                    background: 'rgba(255,255,255,0.05)',
-                    border: '1px solid rgba(255,255,255,0.06)',
-                    borderRadius: '0.5rem',
-                    color: 'white',
-                    outline: 'none',
-                    fontSize: '0.875rem',
-                    transition: 'all 0.2s ease',
-                  }}
-                  onFocus={e => {
-                    e.currentTarget.style.borderColor = '#8b5cf6';
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
-                  }}
-                  onBlur={e => {
-                    e.currentTarget.style.borderColor =
-                      'rgba(255,255,255,0.06)';
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
-                  }}
-                  required
-                />
-
-                {/* Fixed: Select Department - White Text Issue Fixed */}
-                <select
-                  name="department"
-                  value={formData.department}
-                  onChange={handleChange}
-                  style={{
-                    gridColumn: '1 / -1',
-                    padding: '0.75rem',
-                    background: 'rgba(255,255,255,0.05)',
-                    border: '1px solid rgba(255,255,255,0.06)',
-                    borderRadius: '0.5rem',
-                    color: 'white',
-                    outline: 'none',
-                    fontSize: '0.875rem',
-                    transition: 'all 0.2s ease',
-                    appearance: 'auto',
-                    WebkitAppearance: 'auto',
-                    MozAppearance: 'auto',
-                  }}
-                  onFocus={e => {
-                    e.currentTarget.style.borderColor = '#8b5cf6';
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
-                  }}
-                  onBlur={e => {
-                    e.currentTarget.style.borderColor =
-                      'rgba(255,255,255,0.06)';
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
-                  }}
-                  required
-                >
-                  <option
-                    value=""
-                    style={{ background: '#1a1a1a', color: '#9ca3af' }}
-                  >
-                    Select Department *
-                  </option>
-                  {departments.map(dept => (
-                    <option
-                      key={dept._id}
-                      value={dept._id}
-                      style={{
-                        background: '#1a1a1a',
-                        color: 'white',
-                        padding: '0.5rem',
-                      }}
-                    >
-                      {dept.name} ({dept.code})
-                    </option>
-                  ))}
-                </select>
-
-                <select
-                  name="designation"
-                  value={formData.designation}
-                  onChange={handleChange}
-                  style={{
-                    gridColumn: '1 / -1',
-                    padding: '0.75rem',
-                    background: 'rgba(255,255,255,0.05)',
-                    border: '1px solid rgba(255,255,255,0.06)',
-                    borderRadius: '0.5rem',
-                    color: 'white',
-                    outline: 'none',
-                    fontSize: '0.875rem',
-                    transition: 'all 0.2s ease',
-                    appearance: 'auto',
-                    WebkitAppearance: 'auto',
-                    MozAppearance: 'auto',
-                  }}
-                  onFocus={e => {
-                    e.currentTarget.style.borderColor = '#8b5cf6';
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
-                  }}
-                  onBlur={e => {
-                    e.currentTarget.style.borderColor =
-                      'rgba(255,255,255,0.06)';
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
-                  }}
-                >
-                  <option
-                    value="Professor"
-                    style={{ background: '#1a1a1a', color: 'white' }}
-                  >
-                    Professor
-                  </option>
-                  <option
-                    value="Associate Professor"
-                    style={{ background: '#1a1a1a', color: 'white' }}
-                  >
-                    Associate Professor
-                  </option>
-                  <option
-                    value="Assistant Professor"
-                    style={{ background: '#1a1a1a', color: 'white' }}
-                  >
-                    Assistant Professor
-                  </option>
-                  <option
-                    value="Lecturer"
-                    style={{ background: '#1a1a1a', color: 'white' }}
-                  >
-                    Lecturer
-                  </option>
-                  <option
-                    value="Senior Lecturer"
-                    style={{ background: '#1a1a1a', color: 'white' }}
-                  >
-                    Senior Lecturer
-                  </option>
-                </select>
-
-                <input
-                  name="bio"
-                  placeholder="Bio (Optional)"
-                  value={formData.bio}
-                  onChange={handleChange}
-                  style={{
-                    gridColumn: '1 / -1',
-                    padding: '0.75rem',
-                    background: 'rgba(255,255,255,0.05)',
-                    border: '1px solid rgba(255,255,255,0.06)',
-                    borderRadius: '0.5rem',
-                    color: 'white',
-                    outline: 'none',
-                    fontSize: '0.875rem',
-                    transition: 'all 0.2s ease',
-                  }}
-                  onFocus={e => {
-                    e.currentTarget.style.borderColor = '#8b5cf6';
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
-                  }}
-                  onBlur={e => {
-                    e.currentTarget.style.borderColor =
-                      'rgba(255,255,255,0.06)';
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
-                  }}
-                />
-
-                <input
-                  name="specialization"
-                  placeholder="Specialization (comma separated)"
-                  value={formData.specialization}
-                  onChange={handleChange}
-                  style={{
-                    gridColumn: '1 / -1',
-                    padding: '0.75rem',
-                    background: 'rgba(255,255,255,0.05)',
-                    border: '1px solid rgba(255,255,255,0.06)',
-                    borderRadius: '0.5rem',
-                    color: 'white',
-                    outline: 'none',
-                    fontSize: '0.875rem',
-                    transition: 'all 0.2s ease',
-                  }}
-                  onFocus={e => {
-                    e.currentTarget.style.borderColor = '#8b5cf6';
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
-                  }}
-                  onBlur={e => {
-                    e.currentTarget.style.borderColor =
-                      'rgba(255,255,255,0.06)';
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
-                  }}
-                />
-
-                <input
-                  name="office.room"
-                  placeholder="Office Room"
-                  value={formData.office.room}
-                  onChange={handleChange}
-                  style={{
-                    padding: '0.75rem',
-                    background: 'rgba(255,255,255,0.05)',
-                    border: '1px solid rgba(255,255,255,0.06)',
-                    borderRadius: '0.5rem',
-                    color: 'white',
-                    outline: 'none',
-                    fontSize: '0.875rem',
-                    transition: 'all 0.2s ease',
-                  }}
-                  onFocus={e => {
-                    e.currentTarget.style.borderColor = '#8b5cf6';
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
-                  }}
-                  onBlur={e => {
-                    e.currentTarget.style.borderColor =
-                      'rgba(255,255,255,0.06)';
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
-                  }}
-                />
-
-                <input
-                  name="office.building"
-                  placeholder="Office Building"
-                  value={formData.office.building}
-                  onChange={handleChange}
-                  style={{
-                    padding: '0.75rem',
-                    background: 'rgba(255,255,255,0.05)',
-                    border: '1px solid rgba(255,255,255,0.06)',
-                    borderRadius: '0.5rem',
-                    color: 'white',
-                    outline: 'none',
-                    fontSize: '0.875rem',
-                    transition: 'all 0.2s ease',
-                  }}
-                  onFocus={e => {
-                    e.currentTarget.style.borderColor = '#8b5cf6';
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
-                  }}
-                  onBlur={e => {
-                    e.currentTarget.style.borderColor =
-                      'rgba(255,255,255,0.06)';
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
-                  }}
-                />
-              </div>
-
-              <div
-                style={{ display: 'flex', gap: '0.75rem', marginTop: '1.5rem' }}
-              >
+            <div className="bg-gray-900 rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto border border-white/10 shadow-2xl">
+              <div className="sticky top-0 bg-gray-900/95 backdrop-blur-sm border-b border-white/10 px-6 py-4 flex items-center justify-between">
+                <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                  <UserPlusIcon className="w-5 h-5 text-purple-400" />
+                  Add New Teacher
+                </h2>
                 <button
-                  type="submit"
-                  style={{
-                    flex: 1,
-                    padding: '0.75rem',
-                    background: 'linear-gradient(135deg, #8b5cf6, #ec4899)',
-                    color: 'white',
-                    borderRadius: '0.5rem',
-                    border: 'none',
-                    cursor: 'pointer',
-                    fontWeight: '600',
-                    fontSize: '0.875rem',
-                    transition: 'all 0.3s ease',
-                  }}
-                  onMouseEnter={e => {
-                    e.currentTarget.style.transform = 'translateY(-1px)';
-                    e.currentTarget.style.boxShadow =
-                      '0 4px 15px rgba(139, 92, 246, 0.3)';
-                  }}
-                  onMouseLeave={e => {
-                    e.currentTarget.style.transform = 'translateY(0)';
-                    e.currentTarget.style.boxShadow = 'none';
-                  }}
-                >
-                  Add Teacher
-                </button>
-                <button
-                  type="button"
                   onClick={() => setShowModal(false)}
-                  style={{
-                    flex: 1,
-                    padding: '0.75rem',
-                    background: 'rgba(255,255,255,0.05)',
-                    color: 'white',
-                    borderRadius: '0.5rem',
-                    border: '1px solid rgba(255,255,255,0.06)',
-                    cursor: 'pointer',
-                    fontWeight: '500',
-                    fontSize: '0.875rem',
-                    transition: 'all 0.2s ease',
-                  }}
-                  onMouseEnter={e => {
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
-                  }}
-                  onMouseLeave={e => {
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
-                  }}
+                  className="p-1.5 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white transition"
                 >
-                  Cancel
+                  <XMarkIcon className="w-6 h-6" />
                 </button>
               </div>
-            </form>
-          </div>
-        </div>
-      )}
 
-      {/* CSS Animation */}
-      <style>{`
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-      `}</style>
+              <form onSubmit={handleCreate} className="p-6 space-y-4">
+                <div>
+                  <label className="block text-gray-400 text-sm font-medium mb-1.5">
+                    Full Name *
+                  </label>
+                  <input
+                    name="name"
+                    placeholder="e.g., Dr. John Doe"
+                    value={formData.name}
+                    onChange={handleChange}
+                    className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:border-purple-500 transition"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-gray-400 text-sm font-medium mb-1.5">
+                    Email *
+                  </label>
+                  <input
+                    name="email"
+                    type="email"
+                    placeholder="teacher@university.edu"
+                    value={formData.email}
+                    onChange={handleChange}
+                    className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:border-purple-500 transition"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-gray-400 text-sm font-medium mb-1.5">
+                    Password *
+                  </label>
+                  <input
+                    name="password"
+                    type="password"
+                    placeholder="••••••••"
+                    value={formData.password}
+                    onChange={handleChange}
+                    className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:border-purple-500 transition"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-gray-400 text-sm font-medium mb-1.5">
+                    Employee ID *
+                  </label>
+                  <input
+                    name="employeeId"
+                    placeholder="e.g., TCH2024001"
+                    value={formData.employeeId}
+                    onChange={handleChange}
+                    className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:border-purple-500 transition"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-gray-400 text-sm font-medium mb-1.5">
+                    Department *
+                  </label>
+                  <select
+                    name="department"
+                    value={formData.department}
+                    onChange={handleChange}
+                    className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-purple-500 transition appearance-auto"
+                    required
+                  >
+                    <option value="" className="bg-gray-900 text-gray-400">
+                      Select Department
+                    </option>
+                    {departments.map(dept => (
+                      <option
+                        key={dept._id}
+                        value={dept._id}
+                        className="bg-gray-900 text-white"
+                      >
+                        {dept.name} ({dept.code})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-gray-400 text-sm font-medium mb-1.5">
+                    Designation *
+                  </label>
+                  <select
+                    name="designation"
+                    value={formData.designation}
+                    onChange={handleChange}
+                    className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-purple-500 transition appearance-auto"
+                  >
+                    <option
+                      value="Professor"
+                      className="bg-gray-900 text-white"
+                    >
+                      Professor
+                    </option>
+                    <option
+                      value="Associate Professor"
+                      className="bg-gray-900 text-white"
+                    >
+                      Associate Professor
+                    </option>
+                    <option
+                      value="Assistant Professor"
+                      className="bg-gray-900 text-white"
+                    >
+                      Assistant Professor
+                    </option>
+                    <option value="Lecturer" className="bg-gray-900 text-white">
+                      Lecturer
+                    </option>
+                    <option
+                      value="Senior Lecturer"
+                      className="bg-gray-900 text-white"
+                    >
+                      Senior Lecturer
+                    </option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-gray-400 text-sm font-medium mb-1.5">
+                    Bio
+                  </label>
+                  <input
+                    name="bio"
+                    placeholder="Brief biography"
+                    value={formData.bio}
+                    onChange={handleChange}
+                    className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:border-purple-500 transition"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-gray-400 text-sm font-medium mb-1.5">
+                    Specializations (comma separated)
+                  </label>
+                  <input
+                    name="specialization"
+                    placeholder="e.g., Machine Learning, AI, Data Science"
+                    value={formData.specialization}
+                    onChange={handleChange}
+                    className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:border-purple-500 transition"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-gray-400 text-sm font-medium mb-1.5">
+                      Office Room
+                    </label>
+                    <input
+                      name="office.room"
+                      placeholder="e.g., 301"
+                      value={formData.office.room}
+                      onChange={handleChange}
+                      className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:border-purple-500 transition"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-gray-400 text-sm font-medium mb-1.5">
+                      Office Building
+                    </label>
+                    <input
+                      name="office.building"
+                      placeholder="e.g., Science Tower"
+                      value={formData.office.building}
+                      onChange={handleChange}
+                      className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:border-purple-500 transition"
+                    />
+                  </div>
+                </div>
+
+                {error && (
+                  <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-2 rounded-lg text-sm">
+                    {error}
+                  </div>
+                )}
+
+                <div className="flex gap-3 pt-2">
+                  <button
+                    type="submit"
+                    className="flex-1 px-4 py-2.5 bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-lg font-medium hover:scale-[1.02] transition-all duration-200 shadow-lg shadow-purple-500/25"
+                  >
+                    Add Teacher
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowModal(false)}
+                    className="flex-1 px-4 py-2.5 bg-white/5 text-white rounded-lg font-medium hover:bg-white/10 transition"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* CSS */}
+        <style>{`
+          @keyframes gradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+          }
+          .animate-gradient {
+            background-size: 200% auto;
+            animation: gradient 3s ease infinite;
+          }
+          @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+          }
+          .animate-fadeIn {
+            animation: fadeIn 0.2s ease-out;
+          }
+          .line-clamp-2 {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+          }
+        `}</style>
+      </div>
     </div>
   );
 };

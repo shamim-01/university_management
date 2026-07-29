@@ -116,47 +116,46 @@ const AllResults = () => {
     return colors[grade] || 'bg-gray-500/20 text-gray-400 border-gray-500/30';
   };
 
-  // Stat cards configuration
   const statCards = [
     {
       label: 'Total Results',
       value: stats.total,
       icon: ChartBarIcon,
-      color: 'purple',
       bg: 'from-purple-500/10 to-purple-500/5',
       border: 'border-purple-500/20',
       iconBg: 'bg-purple-500/20',
       iconColor: 'text-purple-400',
+      textColor: 'text-white',
     },
     {
       label: 'Passed',
       value: stats.passed,
       icon: CheckCircleIcon,
-      color: 'emerald',
       bg: 'from-emerald-500/10 to-emerald-500/5',
       border: 'border-emerald-500/20',
       iconBg: 'bg-emerald-500/20',
       iconColor: 'text-emerald-400',
+      textColor: 'text-emerald-400',
     },
     {
       label: 'Failed',
       value: stats.failed,
       icon: XCircleIcon,
-      color: 'red',
       bg: 'from-red-500/10 to-red-500/5',
       border: 'border-red-500/20',
       iconBg: 'bg-red-500/20',
       iconColor: 'text-red-400',
+      textColor: 'text-red-400',
     },
     {
       label: 'CGPA',
       value: stats.cgpa || '0.00',
       icon: AcademicCapIcon,
-      color: 'blue',
       bg: 'from-blue-500/10 to-blue-500/5',
       border: 'border-blue-500/20',
       iconBg: 'bg-blue-500/20',
       iconColor: 'text-blue-400',
+      textColor: 'text-blue-400',
     },
   ];
 
@@ -207,8 +206,7 @@ const AllResults = () => {
           {statCards.map((stat, index) => (
             <div
               key={stat.label}
-              className={`bg-gradient-to-br ${stat.bg} rounded-2xl p-5 border ${stat.border} hover:scale-[1.02] transition-all duration-300 group`}
-              style={{ animationDelay: `${index * 100}ms` }}
+              className={`group bg-gradient-to-br ${stat.bg} rounded-2xl p-5 border ${stat.border} hover:scale-[1.02] transition-all duration-300`}
             >
               <div className="flex items-start justify-between">
                 <div>
@@ -216,7 +214,7 @@ const AllResults = () => {
                     {stat.label}
                   </p>
                   <p
-                    className={`text-2xl md:text-3xl font-bold text-${stat.color}-400 mt-1`}
+                    className={`text-2xl md:text-3xl font-bold ${stat.textColor} mt-1`}
                   >
                     {stat.value}
                   </p>
@@ -231,46 +229,52 @@ const AllResults = () => {
           ))}
         </div>
 
-        {/* Search Bar */}
-        <div className="relative max-w-lg mb-8">
-          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-            <MagnifyingGlassIcon className="w-5 h-5 text-gray-400" />
-          </div>
-          <input
-            type="text"
-            placeholder="Search by student, course, grade, or status..."
-            value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
-            className="w-full pl-11 pr-12 py-3 bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl text-white text-sm placeholder-gray-400 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all duration-300"
-          />
-          {isSearching && (
-            <div className="absolute right-3 top-1/2 -translate-y-1/2">
-              <div className="w-5 h-5 border-2 border-purple-500/20 border-t-purple-500 rounded-full animate-spin" />
+        {/* Search Bar - Improved Design */}
+        <div className="mb-8">
+          <div className="relative max-w-2xl mx-auto">
+            <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
+              <MagnifyingGlassIcon className="w-5 h-5 text-gray-400" />
             </div>
-          )}
-          {searchTerm && !isSearching && (
-            <button
-              onClick={clearSearch}
-              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-white/10 rounded-lg transition-colors duration-200 text-gray-400 hover:text-white"
-            >
-              <XMarkIcon className="w-5 h-5" />
-            </button>
-          )}
+            <input
+              type="text"
+              placeholder="🔍 Search by student name, ID, course code, grade, or status..."
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              className="w-full pl-12 pr-14 py-3.5 bg-white/5 backdrop-blur-sm border-2 border-white/10 rounded-2xl text-white text-sm placeholder-gray-400 focus:outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-500/20 transition-all duration-300 shadow-lg shadow-purple-500/5"
+            />
+            {isSearching && (
+              <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                <div className="w-5 h-5 border-2 border-purple-500/20 border-t-purple-500 rounded-full animate-spin" />
+              </div>
+            )}
+            {searchTerm && !isSearching && (
+              <button
+                onClick={clearSearch}
+                className="absolute right-4 top-1/2 -translate-y-1/2 p-1.5 hover:bg-white/10 rounded-lg transition-colors duration-200 text-gray-400 hover:text-white group"
+              >
+                <XMarkIcon className="w-5 h-5 group-hover:rotate-90 transition-transform duration-300" />
+              </button>
+            )}
+          </div>
+
+          {/* Search Tips */}
           {searchTerm && (
-            <div className="mt-2 text-sm">
-              <span className="text-gray-400">
-                Found{' '}
-                <span className="text-purple-400 font-semibold">
-                  {results.length}
-                </span>{' '}
-                result{results.length !== 1 ? 's' : ''} for "
-                <span className="text-white font-medium">{searchTerm}</span>"
-              </span>
-              {searchTerm.length === 1 && (
-                <span className="ml-3 text-yellow-400/70 text-xs">
-                  💡 Try typing at least 2 characters for better results
+            <div className="mt-3 text-center">
+              <span className="inline-flex items-center gap-2 px-4 py-2 bg-white/5 rounded-full text-sm">
+                <span className="text-gray-400">
+                  Found{' '}
+                  <span className="text-purple-400 font-semibold">
+                    {results.length}
+                  </span>{' '}
+                  result{results.length !== 1 ? 's' : ''} for "
+                  <span className="text-white font-medium">{searchTerm}</span>"
                 </span>
-              )}
+                {searchTerm.length === 1 && (
+                  <span className="flex items-center gap-1 text-yellow-400/70 text-xs bg-yellow-400/10 px-2 py-0.5 rounded-full">
+                    💡 Try typing at least 2 characters
+                  </span>
+                )}
+              </span>
             </div>
           )}
         </div>

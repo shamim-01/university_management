@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import {
@@ -7,11 +7,16 @@ import {
   AcademicCapIcon,
   UserGroupIcon,
   BookOpenIcon,
+  SparklesIcon,
+  ArrowPathIcon,
+  TrendingUpIcon,
+  TrendingDownIcon,
 } from '@heroicons/react/24/outline';
 
 const Analytics = () => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
   const [stats, setStats] = useState({
     totalStudents: 0,
@@ -22,13 +27,11 @@ const Analytics = () => {
   const [deptData, setDeptData] = useState([]);
   const [coursePerformance, setCoursePerformance] = useState([]);
 
-  // Fetch Analytics Data
-  const fetchAnalytics = async () => {
+  const fetchAnalytics = async (showRefresh = false) => {
     try {
-      setLoading(true);
-      console.log('📥 1. Fetching analytics data...');
+      if (showRefresh) setRefreshing(true);
+      else setLoading(true);
 
-      // Parallel API calls
       const [studentsRes, teachersRes, coursesRes, departmentsRes] =
         await Promise.all([
           api.get('/students'),
@@ -37,12 +40,6 @@ const Analytics = () => {
           api.get('/departments'),
         ]);
 
-      console.log('📥 2. Students:', studentsRes.data);
-      console.log('📥 3. Teachers:', teachersRes.data);
-      console.log('📥 4. Courses:', coursesRes.data);
-      console.log('📥 5. Departments:', departmentsRes.data);
-
-      // Extract data
       const students =
         studentsRes.data?.data || studentsRes.data?.students || [];
       const teachers =
@@ -50,15 +47,13 @@ const Analytics = () => {
       const courses = coursesRes.data?.courses || coursesRes.data?.data || [];
       const departments = departmentsRes.data?.data || [];
 
-      // Set stats
       setStats({
         totalStudents: students.length,
         totalTeachers: teachers.length,
         totalCourses: courses.length,
-        attendanceRate: Math.round(Math.random() * 20 + 75), // Simulated attendance
+        attendanceRate: Math.round(Math.random() * 20 + 75),
       });
 
-      // Department-wise student distribution
       const deptStats = departments.map(dept => {
         const count = students.filter(
           s => s.department?._id === dept._id || s.department === dept._id,
@@ -72,7 +67,6 @@ const Analytics = () => {
 
       setDeptData(deptStats);
 
-      // Course performance (from courses with students)
       const courseStats = courses.map(course => {
         const enrolledStudents = course.students?.length || 0;
         const passRate =
@@ -88,13 +82,13 @@ const Analytics = () => {
       });
 
       setCoursePerformance(courseStats);
-
-      console.log('✅ 6. Analytics data loaded!');
+      setError('');
     } catch (err) {
-      console.error('❌ Error fetching analytics:', err);
+      console.error('Error fetching analytics:', err);
       setError('Failed to load analytics data');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -114,316 +108,294 @@ const Analytics = () => {
     fetchAnalytics();
   }, []);
 
-  if (loading) {
-    return (
-      <div style={{ color: 'white', textAlign: 'center', padding: '2rem' }}>
-        Loading analytics...
-      </div>
-    );
-  }
-
   const statItems = [
     {
       label: 'Total Students',
       value: stats.totalStudents,
       icon: UsersIcon,
       change: '+12%',
+      trend: 'up',
+      color: 'from-purple-500/10 to-purple-500/5',
+      border: 'border-purple-500/20',
+      iconBg: 'bg-purple-500/20',
+      iconColor: 'text-purple-400',
+      textColor: 'text-white',
     },
     {
       label: 'Total Teachers',
       value: stats.totalTeachers,
       icon: AcademicCapIcon,
       change: '+8%',
+      trend: 'up',
+      color: 'from-blue-500/10 to-blue-500/5',
+      border: 'border-blue-500/20',
+      iconBg: 'bg-blue-500/20',
+      iconColor: 'text-blue-400',
+      textColor: 'text-white',
     },
     {
       label: 'Total Courses',
       value: stats.totalCourses,
       icon: BookOpenIcon,
       change: '+5%',
+      trend: 'up',
+      color: 'from-emerald-500/10 to-emerald-500/5',
+      border: 'border-emerald-500/20',
+      iconBg: 'bg-emerald-500/20',
+      iconColor: 'text-emerald-400',
+      textColor: 'text-white',
     },
     {
       label: 'Attendance Rate',
       value: `${stats.attendanceRate}%`,
       icon: UserGroupIcon,
       change: '+3%',
+      trend: 'up',
+      color: 'from-pink-500/10 to-pink-500/5',
+      border: 'border-pink-500/20',
+      iconBg: 'bg-pink-500/20',
+      iconColor: 'text-pink-400',
+      textColor: 'text-pink-400',
     },
   ];
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[70vh]">
+        <div className="text-center">
+          <div className="relative">
+            <div className="w-16 h-16 border-4 border-purple-500/20 border-t-purple-500 rounded-full animate-spin" />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <ChartBarIcon className="w-6 h-6 text-purple-400/50 animate-pulse" />
+            </div>
+          </div>
+          <p className="text-gray-400 mt-4 font-medium">Loading analytics...</p>
+          <p className="text-gray-500 text-sm mt-1">Please wait a moment</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div style={{ padding: '1.5rem' }}>
-      <div style={{ marginBottom: '1.5rem' }}>
-        <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: 'white' }}>
-          Analytics Dashboard
-        </h1>
-        <p style={{ color: '#9ca3af', marginTop: '0.25rem' }}>
-          Role:{' '}
-          <span style={{ color: '#a78bfa', textTransform: 'capitalize' }}>
-            {user?.role}
-          </span>
-        </p>
-        {error && (
-          <p
-            style={{
-              color: '#f87171',
-              fontSize: '0.875rem',
-              marginTop: '0.5rem',
-            }}
-          >
-            {error}
-          </p>
-        )}
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-900 to-black p-4 md:p-6">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="relative mb-10">
+          <div className="absolute -top-20 -right-20 w-64 h-64 bg-purple-500/10 rounded-full blur-3xl" />
+          <div className="absolute -bottom-20 -left-20 w-64 h-64 bg-pink-500/10 rounded-full blur-3xl" />
 
-      {/* Stats Grid */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-          gap: '1.5rem',
-          marginBottom: '1.5rem',
-        }}
-      >
-        {statItems.map((stat, index) => (
-          <div
-            key={index}
-            style={{
-              background: 'rgba(255, 255, 255, 0.05)',
-              borderRadius: '1rem',
-              padding: '1.5rem',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              transition: 'all 0.3s ease',
-            }}
-            onMouseEnter={e => {
-              e.currentTarget.style.borderColor = 'rgba(139, 92, 246, 0.3)';
-              e.currentTarget.style.transform = 'scale(1.02)';
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-              e.currentTarget.style.transform = 'scale(1)';
-            }}
-          >
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-              }}
-            >
+          <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex items-start gap-4">
+              <div className="hidden md:flex w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 border border-purple-500/20 items-center justify-center backdrop-blur-sm">
+                <ChartBarIcon className="w-7 h-7 text-purple-400" />
+              </div>
               <div>
-                <p style={{ fontSize: '0.875rem', color: '#9ca3af' }}>
-                  {stat.label}
+                <div className="flex items-center gap-3 flex-wrap">
+                  <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-purple-400 via-pink-400 to-purple-400 bg-clip-text text-transparent animate-gradient">
+                    Analytics Dashboard
+                  </h1>
+                  <div className="flex items-center gap-1 px-3 py-1 bg-purple-500/20 rounded-full border border-purple-500/20">
+                    <SparklesIcon className="w-3.5 h-3.5 text-purple-400" />
+                    <span className="text-purple-400 text-xs font-medium">
+                      Insights
+                    </span>
+                  </div>
+                </div>
+                <p className="text-gray-400 text-sm flex items-center gap-2 mt-1.5">
+                  <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />
+                  Real-time analytics and performance metrics
                 </p>
-                <p
-                  style={{
-                    fontSize: '1.5rem',
-                    fontWeight: 'bold',
-                    color: 'white',
-                    marginTop: '0.25rem',
-                  }}
-                >
-                  {stat.value}
-                </p>
-              </div>
-              <div
-                style={{
-                  width: '3rem',
-                  height: '3rem',
-                  borderRadius: '0.75rem',
-                  background: 'rgba(255,255,255,0.05)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#a78bfa',
-                }}
-              >
-                <stat.icon style={{ width: '1.5rem', height: '1.5rem' }} />
               </div>
             </div>
-            <div
-              style={{
-                marginTop: '1rem',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.25rem',
-                color: '#4ade80',
-                fontSize: '0.875rem',
-              }}
+
+            <button
+              onClick={() => fetchAnalytics(true)}
+              disabled={refreshing}
+              className="flex items-center gap-2 px-4 py-2.5 bg-white/5 hover:bg-white/10 rounded-xl text-gray-300 hover:text-white transition-all duration-200 border border-white/10 hover:border-white/20 disabled:opacity-50 backdrop-blur-sm"
             >
-              <span>📈</span>
-              <span>{stat.change} from last month</span>
+              <ArrowPathIcon
+                className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`}
+              />
+              {refreshing ? 'Refreshing...' : 'Refresh'}
+            </button>
+          </div>
+        </div>
+
+        {error && (
+          <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-xl mb-6 text-sm flex items-center gap-2">
+            <ChartBarIcon className="w-5 h-5" />
+            {error}
+          </div>
+        )}
+
+        {/* Stats Grid */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          {statItems.map((stat, index) => (
+            <div
+              key={index}
+              className={`group bg-gradient-to-br ${stat.color} rounded-2xl p-5 border ${stat.border} hover:scale-[1.02] transition-all duration-300`}
+            >
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-gray-400 text-xs uppercase tracking-wider font-medium">
+                    {stat.label}
+                  </p>
+                  <p
+                    className={`text-2xl md:text-3xl font-bold ${stat.textColor} mt-1`}
+                  >
+                    {stat.value}
+                  </p>
+                </div>
+                <div
+                  className={`p-2.5 rounded-xl ${stat.iconBg} group-hover:scale-110 transition-transform duration-200`}
+                >
+                  <stat.icon className={`w-5 h-5 ${stat.iconColor}`} />
+                </div>
+              </div>
+              <div className="mt-3 flex items-center gap-1.5 text-emerald-400 text-xs font-medium">
+                <TrendingUpIcon className="w-3.5 h-3.5" />
+                <span>{stat.change} from last month</span>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Charts Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Department-wise Students */}
+          <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10 shadow-lg shadow-purple-500/5">
+            <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+              <UsersIcon className="w-5 h-5 text-purple-400" />
+              Department-wise Students
+            </h2>
+            <div className="space-y-4">
+              {deptData && deptData.length > 0 ? (
+                deptData.map(item => (
+                  <div key={item.dept} className="group">
+                    <div className="flex justify-between text-sm mb-1.5">
+                      <span className="text-gray-300 font-medium">
+                        {item.dept}
+                      </span>
+                      <span className="text-white font-semibold">
+                        {item.students} students
+                      </span>
+                    </div>
+                    <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden">
+                      <div
+                        className="h-full rounded-full transition-all duration-1000 group-hover:opacity-80"
+                        style={{
+                          width:
+                            stats.totalStudents > 0
+                              ? `${(item.students / stats.totalStudents) * 100}%`
+                              : '0%',
+                          background: item.color,
+                        }}
+                      />
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center text-gray-400 py-8">
+                  <UsersIcon className="w-12 h-12 text-gray-600 mx-auto mb-2" />
+                  <p>No department data available</p>
+                </div>
+              )}
             </div>
           </div>
-        ))}
-      </div>
 
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-          gap: '1.5rem',
-        }}
-      >
-        {/* Department-wise Students */}
-        <div
-          style={{
-            background: 'rgba(255, 255, 255, 0.05)',
-            borderRadius: '1rem',
-            padding: '1.5rem',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
-          }}
-        >
-          <h2
-            style={{
-              fontSize: '1.125rem',
-              fontWeight: '600',
-              color: 'white',
-              marginBottom: '1.5rem',
-            }}
-          >
-            Department-wise Students
-          </h2>
-          <div
-            style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}
-          >
-            {deptData && deptData.length > 0 ? (
-              deptData.map(item => (
-                <div key={item.dept}>
+          {/* Course Performance */}
+          <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10 shadow-lg shadow-purple-500/5">
+            <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+              <BookOpenIcon className="w-5 h-5 text-blue-400" />
+              Course Performance
+            </h2>
+            <div className="space-y-3 max-h-[350px] overflow-y-auto pr-1 custom-scrollbar">
+              {coursePerformance && coursePerformance.length > 0 ? (
+                coursePerformance.map((course, index) => (
                   <div
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      fontSize: '0.875rem',
-                      marginBottom: '0.25rem',
-                    }}
+                    key={index}
+                    className="group flex items-center justify-between p-3 bg-white/5 hover:bg-white/10 rounded-xl transition-all duration-200"
                   >
-                    <span style={{ color: '#d1d5db' }}>{item.dept}</span>
-                    <span style={{ color: 'white', fontWeight: '600' }}>
-                      {item.students}
-                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-white font-medium group-hover:text-purple-400 transition-colors duration-200">
+                        {course.course}
+                      </p>
+                      <p className="text-gray-500 text-xs truncate">
+                        {course.teacher}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-3 ml-4">
+                      <span className="text-white font-semibold text-sm">
+                        {course.passRate}%
+                      </span>
+                      <span
+                        className={`px-2.5 py-1 rounded-full text-[10px] font-medium border ${
+                          course.status === 'Excellent'
+                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                            : course.status === 'Good'
+                              ? 'bg-blue-500/10 text-blue-400 border-blue-500/20'
+                              : 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20'
+                        }`}
+                      >
+                        {course.status}
+                      </span>
+                    </div>
                   </div>
-                  <div
-                    style={{
-                      width: '100%',
-                      height: '0.5rem',
-                      background: 'rgba(255,255,255,0.05)',
-                      borderRadius: '9999px',
-                      overflow: 'hidden',
-                    }}
-                  >
-                    <div
-                      style={{
-                        height: '100%',
-                        background: item.color,
-                        borderRadius: '9999px',
-                        width:
-                          stats.totalStudents > 0
-                            ? `${(item.students / stats.totalStudents) * 100}%`
-                            : '0%',
-                        transition: 'width 1s ease',
-                      }}
-                    />
-                  </div>
+                ))
+              ) : (
+                <div className="text-center text-gray-400 py-8">
+                  <BookOpenIcon className="w-12 h-12 text-gray-600 mx-auto mb-2" />
+                  <p>No course performance data available</p>
                 </div>
-              ))
-            ) : (
-              <p style={{ color: '#6b7280', textAlign: 'center' }}>
-                No department data available
-              </p>
-            )}
+              )}
+            </div>
           </div>
         </div>
 
-        {/* Course Performance */}
-        <div
-          style={{
-            background: 'rgba(255, 255, 255, 0.05)',
-            borderRadius: '1rem',
-            padding: '1.5rem',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
-          }}
-        >
-          <h2
-            style={{
-              fontSize: '1.125rem',
-              fontWeight: '600',
-              color: 'white',
-              marginBottom: '1.5rem',
-            }}
-          >
-            Course Performance
-          </h2>
-          <div
-            style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}
-          >
-            {coursePerformance && coursePerformance.length > 0 ? (
-              coursePerformance.map((course, index) => (
-                <div
-                  key={index}
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    padding: '0.75rem',
-                    borderRadius: '0.5rem',
-                    background: 'rgba(255,255,255,0.05)',
-                    transition: 'all 0.2s',
-                  }}
-                  onMouseEnter={e => {
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
-                  }}
-                  onMouseLeave={e => {
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
-                  }}
-                >
-                  <div>
-                    <p style={{ color: 'white', fontWeight: '500' }}>
-                      {course.course}
-                    </p>
-                    <p style={{ fontSize: '0.75rem', color: '#6b7280' }}>
-                      {course.teacher}
-                    </p>
-                  </div>
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                    }}
-                  >
-                    <span style={{ color: 'white', fontWeight: '600' }}>
-                      {course.passRate}%
-                    </span>
-                    <span
-                      style={{
-                        padding: '0.125rem 0.5rem',
-                        borderRadius: '9999px',
-                        fontSize: '0.625rem',
-                        background:
-                          course.status === 'Excellent'
-                            ? 'rgba(34,197,94,0.2)'
-                            : course.status === 'Good'
-                              ? 'rgba(59,130,246,0.2)'
-                              : 'rgba(234,179,8,0.2)',
-                        color:
-                          course.status === 'Excellent'
-                            ? '#4ade80'
-                            : course.status === 'Good'
-                              ? '#60a5fa'
-                              : '#facc15',
-                      }}
-                    >
-                      {course.status}
-                    </span>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <p style={{ color: '#6b7280', textAlign: 'center' }}>
-                No course performance data available
-              </p>
-            )}
+        {/* Footer Stats */}
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-3 text-gray-400 text-sm bg-white/5 rounded-xl px-4 py-3 border border-white/5">
+          <p>Last updated: {new Date().toLocaleString()}</p>
+          <div className="flex items-center gap-4">
+            <span className="flex items-center gap-1.5 text-purple-400">
+              <UsersIcon className="w-4 h-4" />
+              Total:{' '}
+              <span className="font-medium">
+                {stats.totalStudents + stats.totalTeachers}
+              </span>
+            </span>
+            <span className="flex items-center gap-1.5 text-emerald-400">
+              <BookOpenIcon className="w-4 h-4" />
+              Courses: <span className="font-medium">{stats.totalCourses}</span>
+            </span>
           </div>
         </div>
+
+        {/* CSS */}
+        <style>{`
+          @keyframes gradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+          }
+          .animate-gradient {
+            background-size: 200% auto;
+            animation: gradient 3s ease infinite;
+          }
+          .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+          }
+          .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+          }
+          .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(139, 92, 246, 0.3);
+            border-radius: 10px;
+          }
+          .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: rgba(139, 92, 246, 0.5);
+          }
+        `}</style>
       </div>
     </div>
   );

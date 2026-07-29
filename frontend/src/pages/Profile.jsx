@@ -12,6 +12,9 @@ import {
   BuildingLibraryIcon,
   BriefcaseIcon,
   InformationCircleIcon,
+  SparklesIcon,
+  ShieldCheckIcon,
+  CalendarIcon,
 } from '@heroicons/react/24/outline';
 
 const Profile = () => {
@@ -28,6 +31,7 @@ const Profile = () => {
     phone: '+880 1234 567890',
     bio: 'Passionate about learning and technology',
     avatar: user?.avatar || '',
+    joinDate: user?.createdAt || new Date().toISOString(),
   });
 
   const [formData, setFormData] = useState(profile);
@@ -47,12 +51,14 @@ const Profile = () => {
       const result = await updateProfile({
         name: formData.name,
         phoneNumber: formData.phone,
+        bio: formData.bio,
+        department: formData.department,
       });
 
       if (result.success) {
         setProfile(formData);
         setIsEditing(false);
-        setSuccess('Profile updated successfully!');
+        setSuccess('✅ Profile updated successfully!');
         setTimeout(() => setSuccess(''), 3000);
       }
     } catch (err) {
@@ -74,6 +80,12 @@ const Profile = () => {
       return;
     }
 
+    if (passwordData.newPassword.length < 6) {
+      setError('Password must be at least 6 characters');
+      setLoading(false);
+      return;
+    }
+
     try {
       const result = await changePassword({
         currentPassword: passwordData.currentPassword,
@@ -81,7 +93,7 @@ const Profile = () => {
       });
 
       if (result.success) {
-        setSuccess('Password changed successfully!');
+        setSuccess('🔒 Password changed successfully!');
         setPasswordData({
           currentPassword: '',
           newPassword: '',
@@ -106,916 +118,400 @@ const Profile = () => {
   const getRoleColor = role => {
     switch (role?.toLowerCase()) {
       case 'admin':
-        return 'bg-purple-500/20 text-purple-400';
+        return 'bg-purple-500/20 text-purple-400 border-purple-500/20';
       case 'teacher':
-        return 'bg-blue-500/20 text-blue-400';
+        return 'bg-blue-500/20 text-blue-400 border-blue-500/20';
       case 'student':
-        return 'bg-green-500/20 text-green-400';
+        return 'bg-emerald-500/20 text-emerald-400 border-emerald-500/20';
       default:
-        return 'bg-gray-500/20 text-gray-400';
+        return 'bg-gray-500/20 text-gray-400 border-gray-500/20';
+    }
+  };
+
+  const getRoleIcon = role => {
+    switch (role?.toLowerCase()) {
+      case 'admin':
+        return '👑';
+      case 'teacher':
+        return '👨‍🏫';
+      case 'student':
+        return '🎓';
+      default:
+        return '👤';
+    }
+  };
+
+  const getGradientColor = role => {
+    switch (role?.toLowerCase()) {
+      case 'admin':
+        return 'from-purple-500 to-pink-500';
+      case 'teacher':
+        return 'from-blue-500 to-cyan-500';
+      case 'student':
+        return 'from-emerald-500 to-teal-500';
+      default:
+        return 'from-purple-500 to-pink-500';
     }
   };
 
   if (!user) {
     return (
-      <div style={{ color: 'white', textAlign: 'center', padding: '2rem' }}>
-        Please login to view profile
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center">
+          <div className="w-20 h-20 bg-white/5 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <UserIcon className="w-10 h-10 text-gray-600" />
+          </div>
+          <p className="text-gray-400 text-lg font-medium">
+            Please login to view profile
+          </p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div style={{ padding: '1.5rem', maxWidth: '900px', margin: '0 auto' }}>
-      {/* Header */}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: '1rem',
-          marginBottom: '2rem',
-        }}
-      >
-        <div>
-          <h1
-            style={{
-              fontSize: '2rem',
-              fontWeight: 'bold',
-              color: 'white',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.75rem',
-            }}
-          >
-            <UserIcon
-              style={{ width: '1.75rem', height: '1.75rem', color: '#a78bfa' }}
-            />
-            <span>My Profile</span>
-          </h1>
-          <p
-            style={{
-              color: '#9ca3af',
-              fontSize: '0.875rem',
-              marginTop: '0.25rem',
-            }}
-          >
-            Manage your personal information and account settings
-          </p>
-        </div>
-        {!isEditing ? (
-          <button
-            onClick={() => setIsEditing(true)}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              padding: '0.6rem 1.5rem',
-              background: 'linear-gradient(135deg, #8b5cf6, #ec4899)',
-              color: 'white',
-              borderRadius: '0.5rem',
-              border: 'none',
-              cursor: 'pointer',
-              fontWeight: '600',
-              fontSize: '0.875rem',
-              transition: 'all 0.3s ease',
-              boxShadow: '0 4px 15px rgba(139, 92, 246, 0.3)',
-            }}
-            onMouseEnter={e => {
-              e.currentTarget.style.transform = 'translateY(-2px)';
-              e.currentTarget.style.boxShadow =
-                '0 6px 25px rgba(139, 92, 246, 0.4)';
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow =
-                '0 4px 15px rgba(139, 92, 246, 0.3)';
-            }}
-          >
-            <PencilIcon style={{ width: '1.25rem', height: '1.25rem' }} />
-            <span>Edit Profile</span>
-          </button>
-        ) : (
-          <div style={{ display: 'flex', gap: '0.75rem' }}>
-            <button
-              onClick={handleSave}
-              disabled={loading}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                padding: '0.6rem 1.5rem',
-                background: 'linear-gradient(135deg, #22c55e, #16a34a)',
-                color: 'white',
-                borderRadius: '0.5rem',
-                border: 'none',
-                cursor: 'pointer',
-                fontWeight: '600',
-                fontSize: '0.875rem',
-                transition: 'all 0.3s ease',
-                opacity: loading ? 0.6 : 1,
-              }}
-            >
-              <CheckIcon style={{ width: '1.25rem', height: '1.25rem' }} />
-              <span>{loading ? 'Saving...' : 'Save'}</span>
-            </button>
-            <button
-              onClick={handleCancel}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                padding: '0.6rem 1.5rem',
-                background: 'rgba(239, 68, 68, 0.15)',
-                color: '#f87171',
-                borderRadius: '0.5rem',
-                border: '1px solid rgba(239, 68, 68, 0.2)',
-                cursor: 'pointer',
-                fontWeight: '600',
-                fontSize: '0.875rem',
-                transition: 'all 0.3s ease',
-              }}
-              onMouseEnter={e => {
-                e.currentTarget.style.background = 'rgba(239, 68, 68, 0.25)';
-              }}
-              onMouseLeave={e => {
-                e.currentTarget.style.background = 'rgba(239, 68, 68, 0.15)';
-              }}
-            >
-              <XMarkIcon style={{ width: '1.25rem', height: '1.25rem' }} />
-              <span>Cancel</span>
-            </button>
-          </div>
-        )}
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-900 to-black p-4 md:p-6">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="relative mb-8">
+          <div className="absolute -top-20 -right-20 w-64 h-64 bg-purple-500/10 rounded-full blur-3xl" />
+          <div className="absolute -bottom-20 -left-20 w-64 h-64 bg-pink-500/10 rounded-full blur-3xl" />
 
-      {error && (
-        <div
-          style={{
-            background: 'rgba(239, 68, 68, 0.15)',
-            color: '#f87171',
-            padding: '0.75rem 1rem',
-            borderRadius: '0.5rem',
-            marginBottom: '1rem',
-            fontSize: '0.875rem',
-            border: '1px solid rgba(239, 68, 68, 0.2)',
-          }}
-        >
-          {error}
-        </div>
-      )}
-
-      {success && (
-        <div
-          style={{
-            background: 'rgba(34, 197, 94, 0.15)',
-            color: '#4ade80',
-            padding: '0.75rem 1rem',
-            borderRadius: '0.5rem',
-            marginBottom: '1rem',
-            fontSize: '0.875rem',
-            border: '1px solid rgba(34, 197, 94, 0.2)',
-          }}
-        >
-          {success}
-        </div>
-      )}
-
-      {/* Profile Card */}
-      <div
-        style={{
-          background: 'rgba(255, 255, 255, 0.03)',
-          backdropFilter: 'blur(20px)',
-          borderRadius: '1.5rem',
-          border: '1px solid rgba(255, 255, 255, 0.06)',
-          padding: '2.5rem',
-          boxShadow: '0 20px 40px rgba(0, 0, 0, 0.3)',
-          position: 'relative',
-          overflow: 'hidden',
-        }}
-      >
-        {/* Decorative gradient circle */}
-        <div
-          style={{
-            position: 'absolute',
-            top: '-100px',
-            right: '-100px',
-            width: '300px',
-            height: '300px',
-            borderRadius: '50%',
-            background:
-              'radial-gradient(circle, rgba(139, 92, 246, 0.1), transparent)',
-            pointerEvents: 'none',
-          }}
-        />
-        <div
-          style={{
-            position: 'absolute',
-            bottom: '-150px',
-            left: '-150px',
-            width: '400px',
-            height: '400px',
-            borderRadius: '50%',
-            background:
-              'radial-gradient(circle, rgba(236, 72, 153, 0.05), transparent)',
-            pointerEvents: 'none',
-          }}
-        />
-
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: '2.5rem',
-            position: 'relative',
-            zIndex: 1,
-          }}
-        >
-          {/* Avatar Section */}
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-            }}
-          >
-            <div style={{ position: 'relative' }}>
-              <div
-                style={{
-                  width: '120px',
-                  height: '120px',
-                  borderRadius: '50%',
-                  background: `linear-gradient(135deg, ${profile.role === 'admin' ? '#8b5cf6' : profile.role === 'teacher' ? '#3b82f6' : '#22c55e'}, #ec4899)`,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: 'white',
-                  fontSize: '3rem',
-                  fontWeight: 'bold',
-                  boxShadow: '0 8px 30px rgba(139, 92, 246, 0.3)',
-                  border: '3px solid rgba(255, 255, 255, 0.1)',
-                }}
-              >
-                {profile.name.charAt(0).toUpperCase()}
+          <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex items-start gap-4">
+              <div className="hidden md:flex w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 border border-purple-500/20 items-center justify-center backdrop-blur-sm">
+                <UserIcon className="w-7 h-7 text-purple-400" />
               </div>
-              <button
-                style={{
-                  position: 'absolute',
-                  bottom: '4px',
-                  right: '4px',
-                  padding: '0.5rem',
-                  background: 'rgba(139, 92, 246, 0.9)',
-                  borderRadius: '50%',
-                  border: '2px solid #1a1a1a',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s ease',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
-                }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.background = '#8b5cf6';
-                  e.currentTarget.style.transform = 'scale(1.1)';
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.background = 'rgba(139, 92, 246, 0.9)';
-                  e.currentTarget.style.transform = 'scale(1)';
-                }}
-              >
-                <CameraIcon
-                  style={{
-                    width: '1.25rem',
-                    height: '1.25rem',
-                    color: 'white',
-                  }}
-                />
-              </button>
-            </div>
-            <h2
-              style={{
-                color: 'white',
-                fontSize: '1.5rem',
-                fontWeight: '700',
-                marginTop: '1rem',
-              }}
-            >
-              {profile.name}
-            </h2>
-            <span
-              style={{
-                display: 'inline-block',
-                padding: '0.25rem 1rem',
-                borderRadius: '9999px',
-                fontSize: '0.75rem',
-                fontWeight: '600',
-                background: getRoleColor(profile.role).split(' ')[0],
-                color: getRoleColor(profile.role).split(' ')[1],
-                marginTop: '0.25rem',
-              }}
-            >
-              {profile.role}
-            </span>
-          </div>
-
-          {/* Profile Info Grid */}
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-              gap: '1.5rem',
-              width: '100%',
-            }}
-          >
-            <div
-              style={{
-                background: 'rgba(255, 255, 255, 0.03)',
-                borderRadius: '0.75rem',
-                padding: '1rem 1.25rem',
-                border: '1px solid rgba(255, 255, 255, 0.04)',
-              }}
-            >
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.75rem',
-                }}
-              >
-                <UserIcon
-                  style={{
-                    width: '1.25rem',
-                    height: '1.25rem',
-                    color: '#6b7280',
-                  }}
-                />
-                <div>
-                  <p style={{ color: '#6b7280', fontSize: '0.75rem' }}>
-                    Full Name
-                  </p>
-                  {isEditing ? (
-                    <input
-                      type="text"
-                      value={formData.name}
-                      onChange={e =>
-                        setFormData({ ...formData, name: e.target.value })
-                      }
-                      style={{
-                        width: '100%',
-                        padding: '0.4rem 0',
-                        background: 'transparent',
-                        border: 'none',
-                        borderBottom: '1px solid rgba(139, 92, 246, 0.3)',
-                        color: 'white',
-                        outline: 'none',
-                        fontSize: '0.875rem',
-                        fontWeight: '500',
-                      }}
-                      autoFocus
-                    />
-                  ) : (
-                    <p
-                      style={{
-                        color: 'white',
-                        fontSize: '0.875rem',
-                        fontWeight: '500',
-                      }}
-                    >
-                      {profile.name}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div
-              style={{
-                background: 'rgba(255, 255, 255, 0.03)',
-                borderRadius: '0.75rem',
-                padding: '1rem 1.25rem',
-                border: '1px solid rgba(255, 255, 255, 0.04)',
-              }}
-            >
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.75rem',
-                }}
-              >
-                <EnvelopeIcon
-                  style={{
-                    width: '1.25rem',
-                    height: '1.25rem',
-                    color: '#6b7280',
-                  }}
-                />
-                <div>
-                  <p style={{ color: '#6b7280', fontSize: '0.75rem' }}>Email</p>
-                  {isEditing ? (
-                    <input
-                      type="email"
-                      value={formData.email}
-                      onChange={e =>
-                        setFormData({ ...formData, email: e.target.value })
-                      }
-                      style={{
-                        width: '100%',
-                        padding: '0.4rem 0',
-                        background: 'transparent',
-                        border: 'none',
-                        borderBottom: '1px solid rgba(139, 92, 246, 0.3)',
-                        color: 'white',
-                        outline: 'none',
-                        fontSize: '0.875rem',
-                        fontWeight: '500',
-                      }}
-                    />
-                  ) : (
-                    <p
-                      style={{
-                        color: 'white',
-                        fontSize: '0.875rem',
-                        fontWeight: '500',
-                      }}
-                    >
-                      {profile.email}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div
-              style={{
-                background: 'rgba(255, 255, 255, 0.03)',
-                borderRadius: '0.75rem',
-                padding: '1rem 1.25rem',
-                border: '1px solid rgba(255, 255, 255, 0.04)',
-              }}
-            >
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.75rem',
-                }}
-              >
-                <PhoneIcon
-                  style={{
-                    width: '1.25rem',
-                    height: '1.25rem',
-                    color: '#6b7280',
-                  }}
-                />
-                <div>
-                  <p style={{ color: '#6b7280', fontSize: '0.75rem' }}>Phone</p>
-                  {isEditing ? (
-                    <input
-                      type="text"
-                      value={formData.phone}
-                      onChange={e =>
-                        setFormData({ ...formData, phone: e.target.value })
-                      }
-                      style={{
-                        width: '100%',
-                        padding: '0.4rem 0',
-                        background: 'transparent',
-                        border: 'none',
-                        borderBottom: '1px solid rgba(139, 92, 246, 0.3)',
-                        color: 'white',
-                        outline: 'none',
-                        fontSize: '0.875rem',
-                        fontWeight: '500',
-                      }}
-                    />
-                  ) : (
-                    <p
-                      style={{
-                        color: 'white',
-                        fontSize: '0.875rem',
-                        fontWeight: '500',
-                      }}
-                    >
-                      {profile.phone}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div
-              style={{
-                background: 'rgba(255, 255, 255, 0.03)',
-                borderRadius: '0.75rem',
-                padding: '1rem 1.25rem',
-                border: '1px solid rgba(255, 255, 255, 0.04)',
-              }}
-            >
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.75rem',
-                }}
-              >
-                <BriefcaseIcon
-                  style={{
-                    width: '1.25rem',
-                    height: '1.25rem',
-                    color: '#6b7280',
-                  }}
-                />
-                <div>
-                  <p style={{ color: '#6b7280', fontSize: '0.75rem' }}>Role</p>
-                  {isEditing ? (
-                    <select
-                      value={formData.role}
-                      onChange={e =>
-                        setFormData({ ...formData, role: e.target.value })
-                      }
-                      style={{
-                        width: '100%',
-                        padding: '0.4rem 0',
-                        background: 'transparent',
-                        border: 'none',
-                        borderBottom: '1px solid rgba(139, 92, 246, 0.3)',
-                        color: 'white',
-                        outline: 'none',
-                        fontSize: '0.875rem',
-                        fontWeight: '500',
-                      }}
-                    >
-                      <option value="Admin" style={{ background: '#1a1a1a' }}>
-                        Admin
-                      </option>
-                      <option value="Teacher" style={{ background: '#1a1a1a' }}>
-                        Teacher
-                      </option>
-                      <option value="Student" style={{ background: '#1a1a1a' }}>
-                        Student
-                      </option>
-                    </select>
-                  ) : (
-                    <p
-                      style={{
-                        color: 'white',
-                        fontSize: '0.875rem',
-                        fontWeight: '500',
-                        textTransform: 'capitalize',
-                      }}
-                    >
+              <div>
+                <div className="flex items-center gap-3 flex-wrap">
+                  <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-purple-400 via-pink-400 to-purple-400 bg-clip-text text-transparent animate-gradient">
+                    My Profile
+                  </h1>
+                  <div className="flex items-center gap-1 px-3 py-1 bg-purple-500/20 rounded-full border border-purple-500/20">
+                    <SparklesIcon className="w-3.5 h-3.5 text-purple-400" />
+                    <span className="text-purple-400 text-xs font-medium">
                       {profile.role}
-                    </p>
-                  )}
+                    </span>
+                  </div>
                 </div>
+                <p className="text-gray-400 text-sm flex items-center gap-2 mt-1.5">
+                  <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />
+                  Manage your personal information and account settings
+                </p>
               </div>
             </div>
 
-            <div
-              style={{
-                background: 'rgba(255, 255, 255, 0.03)',
-                borderRadius: '0.75rem',
-                padding: '1rem 1.25rem',
-                border: '1px solid rgba(255, 255, 255, 0.04)',
-                gridColumn: isEditing ? '1 / -1' : 'auto',
-              }}
-            >
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  gap: '0.75rem',
-                }}
+            {!isEditing ? (
+              <button
+                onClick={() => setIsEditing(true)}
+                className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl font-medium text-sm hover:scale-[1.02] transition-all duration-200 shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40"
               >
-                <BuildingLibraryIcon
-                  style={{
-                    width: '1.25rem',
-                    height: '1.25rem',
-                    color: '#6b7280',
-                    marginTop: '0.125rem',
-                  }}
-                />
-                <div style={{ flex: 1 }}>
-                  <p style={{ color: '#6b7280', fontSize: '0.75rem' }}>
-                    Department
-                  </p>
-                  {isEditing ? (
-                    <input
-                      type="text"
-                      value={formData.department}
-                      onChange={e =>
-                        setFormData({ ...formData, department: e.target.value })
-                      }
-                      style={{
-                        width: '100%',
-                        padding: '0.4rem 0',
-                        background: 'transparent',
-                        border: 'none',
-                        borderBottom: '1px solid rgba(139, 92, 246, 0.3)',
-                        color: 'white',
-                        outline: 'none',
-                        fontSize: '0.875rem',
-                        fontWeight: '500',
-                      }}
-                    />
-                  ) : (
-                    <p
-                      style={{
-                        color: 'white',
-                        fontSize: '0.875rem',
-                        fontWeight: '500',
-                      }}
-                    >
-                      {profile.department}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div
-              style={{
-                background: 'rgba(255, 255, 255, 0.03)',
-                borderRadius: '0.75rem',
-                padding: '1rem 1.25rem',
-                border: '1px solid rgba(255, 255, 255, 0.04)',
-                gridColumn: '1 / -1',
-              }}
-            >
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  gap: '0.75rem',
-                }}
-              >
-                <InformationCircleIcon
-                  style={{
-                    width: '1.25rem',
-                    height: '1.25rem',
-                    color: '#6b7280',
-                    marginTop: '0.125rem',
-                  }}
-                />
-                <div style={{ flex: 1 }}>
-                  <p style={{ color: '#6b7280', fontSize: '0.75rem' }}>Bio</p>
-                  {isEditing ? (
-                    <textarea
-                      value={formData.bio}
-                      onChange={e =>
-                        setFormData({ ...formData, bio: e.target.value })
-                      }
-                      rows="2"
-                      style={{
-                        width: '100%',
-                        padding: '0.4rem 0',
-                        background: 'transparent',
-                        border: 'none',
-                        borderBottom: '1px solid rgba(139, 92, 246, 0.3)',
-                        color: 'white',
-                        outline: 'none',
-                        fontSize: '0.875rem',
-                        fontWeight: '500',
-                        resize: 'vertical',
-                        fontFamily: 'inherit',
-                      }}
-                    />
-                  ) : (
-                    <p
-                      style={{
-                        color: '#d1d5db',
-                        fontSize: '0.875rem',
-                        lineHeight: '1.6',
-                      }}
-                    >
-                      {profile.bio || 'No bio provided'}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Change Password Section */}
-          <div
-            style={{
-              width: '100%',
-              marginTop: '1rem',
-              paddingTop: '1.5rem',
-              borderTop: '1px solid rgba(255, 255, 255, 0.06)',
-            }}
-          >
-            <button
-              onClick={() => setShowPasswordForm(!showPasswordForm)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                background: 'transparent',
-                border: 'none',
-                color: '#a78bfa',
-                cursor: 'pointer',
-                fontSize: '0.875rem',
-                fontWeight: '500',
-                transition: 'all 0.2s ease',
-                padding: '0.5rem 0',
-              }}
-              onMouseEnter={e => {
-                e.currentTarget.style.color = '#c4b5fd';
-              }}
-              onMouseLeave={e => {
-                e.currentTarget.style.color = '#a78bfa';
-              }}
-            >
-              🔒 {showPasswordForm ? 'Hide' : 'Change'} Password
-            </button>
-
-            {showPasswordForm && (
-              <form
-                onSubmit={handlePasswordChange}
-                style={{ marginTop: '1rem' }}
-              >
-                <div
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: '1fr 1fr',
-                    gap: '0.75rem',
-                  }}
+                <PencilIcon className="w-5 h-5" />
+                Edit Profile
+              </button>
+            ) : (
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleSave}
+                  disabled={loading}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl font-medium text-sm hover:scale-[1.02] transition-all duration-200 shadow-lg shadow-emerald-500/25 disabled:opacity-50"
                 >
-                  <input
-                    type="password"
-                    placeholder="Current Password *"
-                    value={passwordData.currentPassword}
-                    onChange={e =>
-                      setPasswordData({
-                        ...passwordData,
-                        currentPassword: e.target.value,
-                      })
-                    }
-                    style={{
-                      gridColumn: '1 / -1',
-                      padding: '0.75rem',
-                      background: 'rgba(255,255,255,0.05)',
-                      border: '1px solid rgba(255,255,255,0.06)',
-                      borderRadius: '0.5rem',
-                      color: 'white',
-                      outline: 'none',
-                      fontSize: '0.875rem',
-                      transition: 'all 0.2s ease',
-                    }}
-                    onFocus={e => {
-                      e.currentTarget.style.borderColor = '#8b5cf6';
-                      e.currentTarget.style.background =
-                        'rgba(255,255,255,0.08)';
-                    }}
-                    onBlur={e => {
-                      e.currentTarget.style.borderColor =
-                        'rgba(255,255,255,0.06)';
-                      e.currentTarget.style.background =
-                        'rgba(255,255,255,0.05)';
-                    }}
-                    required
-                  />
-                  <input
-                    type="password"
-                    placeholder="New Password *"
-                    value={passwordData.newPassword}
-                    onChange={e =>
-                      setPasswordData({
-                        ...passwordData,
-                        newPassword: e.target.value,
-                      })
-                    }
-                    style={{
-                      padding: '0.75rem',
-                      background: 'rgba(255,255,255,0.05)',
-                      border: '1px solid rgba(255,255,255,0.06)',
-                      borderRadius: '0.5rem',
-                      color: 'white',
-                      outline: 'none',
-                      fontSize: '0.875rem',
-                      transition: 'all 0.2s ease',
-                    }}
-                    onFocus={e => {
-                      e.currentTarget.style.borderColor = '#8b5cf6';
-                      e.currentTarget.style.background =
-                        'rgba(255,255,255,0.08)';
-                    }}
-                    onBlur={e => {
-                      e.currentTarget.style.borderColor =
-                        'rgba(255,255,255,0.06)';
-                      e.currentTarget.style.background =
-                        'rgba(255,255,255,0.05)';
-                    }}
-                    required
-                  />
-                  <input
-                    type="password"
-                    placeholder="Confirm New Password *"
-                    value={passwordData.confirmPassword}
-                    onChange={e =>
-                      setPasswordData({
-                        ...passwordData,
-                        confirmPassword: e.target.value,
-                      })
-                    }
-                    style={{
-                      padding: '0.75rem',
-                      background: 'rgba(255,255,255,0.05)',
-                      border: '1px solid rgba(255,255,255,0.06)',
-                      borderRadius: '0.5rem',
-                      color: 'white',
-                      outline: 'none',
-                      fontSize: '0.875rem',
-                      transition: 'all 0.2s ease',
-                    }}
-                    onFocus={e => {
-                      e.currentTarget.style.borderColor = '#8b5cf6';
-                      e.currentTarget.style.background =
-                        'rgba(255,255,255,0.08)';
-                    }}
-                    onBlur={e => {
-                      e.currentTarget.style.borderColor =
-                        'rgba(255,255,255,0.06)';
-                      e.currentTarget.style.background =
-                        'rgba(255,255,255,0.05)';
-                    }}
-                    required
-                  />
-                </div>
-                <div
-                  style={{
-                    display: 'flex',
-                    gap: '0.75rem',
-                    marginTop: '0.75rem',
-                  }}
+                  <CheckIcon className="w-5 h-5" />
+                  {loading ? 'Saving...' : 'Save Changes'}
+                </button>
+                <button
+                  onClick={handleCancel}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-red-500/20 text-red-400 rounded-xl font-medium text-sm hover:bg-red-500/30 transition-all duration-200 border border-red-500/20"
                 >
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    style={{
-                      padding: '0.6rem 1.5rem',
-                      background: 'linear-gradient(135deg, #8b5cf6, #ec4899)',
-                      color: 'white',
-                      borderRadius: '0.5rem',
-                      border: 'none',
-                      cursor: 'pointer',
-                      fontWeight: '600',
-                      fontSize: '0.875rem',
-                      transition: 'all 0.3s ease',
-                      opacity: loading ? 0.6 : 1,
-                    }}
-                    onMouseEnter={e => {
-                      e.currentTarget.style.transform = 'translateY(-1px)';
-                      e.currentTarget.style.boxShadow =
-                        '0 4px 15px rgba(139, 92, 246, 0.3)';
-                    }}
-                    onMouseLeave={e => {
-                      e.currentTarget.style.transform = 'translateY(0)';
-                      e.currentTarget.style.boxShadow = 'none';
-                    }}
-                  >
-                    {loading ? 'Changing...' : 'Change Password'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowPasswordForm(false);
-                      setPasswordData({
-                        currentPassword: '',
-                        newPassword: '',
-                        confirmPassword: '',
-                      });
-                    }}
-                    style={{
-                      padding: '0.6rem 1.5rem',
-                      background: 'rgba(255,255,255,0.05)',
-                      color: '#9ca3af',
-                      borderRadius: '0.5rem',
-                      border: '1px solid rgba(255,255,255,0.06)',
-                      cursor: 'pointer',
-                      fontWeight: '500',
-                      fontSize: '0.875rem',
-                      transition: 'all 0.2s ease',
-                    }}
-                    onMouseEnter={e => {
-                      e.currentTarget.style.background =
-                        'rgba(255,255,255,0.1)';
-                    }}
-                    onMouseLeave={e => {
-                      e.currentTarget.style.background =
-                        'rgba(255,255,255,0.05)';
-                    }}
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </form>
+                  <XMarkIcon className="w-5 h-5" />
+                  Cancel
+                </button>
+              </div>
             )}
           </div>
         </div>
+
+        {error && (
+          <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-xl mb-6 text-sm flex items-center gap-2">
+            <XMarkIcon className="w-5 h-5" />
+            {error}
+          </div>
+        )}
+
+        {success && (
+          <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-4 py-3 rounded-xl mb-6 text-sm flex items-center gap-2">
+            <CheckIcon className="w-5 h-5" />
+            {success}
+          </div>
+        )}
+
+        {/* Profile Card */}
+        <div className="relative bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 overflow-hidden shadow-2xl shadow-purple-500/5">
+          {/* Decorative elements */}
+          <div className="absolute top-0 right-0 w-96 h-96 bg-purple-500/5 rounded-full blur-3xl -mr-48 -mt-48" />
+          <div className="absolute bottom-0 left-0 w-96 h-96 bg-pink-500/5 rounded-full blur-3xl -ml-48 -mb-48" />
+
+          <div className="relative p-6 md:p-8">
+            {/* Profile Header with Avatar */}
+            <div className="flex flex-col md:flex-row items-center gap-6 mb-8">
+              <div className="relative">
+                <div
+                  className={`w-28 h-28 rounded-full bg-gradient-to-r ${getGradientColor(profile.role)} flex items-center justify-center text-white text-4xl font-bold shadow-2xl shadow-purple-500/30 border-3 border-white/10`}
+                >
+                  {profile.name.charAt(0).toUpperCase()}
+                </div>
+                <button className="absolute bottom-1 right-1 p-2 bg-purple-500 rounded-full border-2 border-gray-900 hover:bg-purple-600 transition-all duration-200 hover:scale-110 shadow-lg">
+                  <CameraIcon className="w-4 h-4 text-white" />
+                </button>
+              </div>
+              <div className="text-center md:text-left">
+                <h2 className="text-2xl font-bold text-white">
+                  {profile.name}
+                </h2>
+                <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 mt-1">
+                  <span
+                    className={`px-3 py-1 rounded-full text-xs font-medium border ${getRoleColor(profile.role)}`}
+                  >
+                    {getRoleIcon(profile.role)} {profile.role}
+                  </span>
+                  <span className="text-gray-500 text-xs flex items-center gap-1">
+                    <CalendarIcon className="w-3.5 h-3.5" />
+                    Joined{' '}
+                    {new Date(profile.joinDate).toLocaleDateString('en-US', {
+                      month: 'short',
+                      year: 'numeric',
+                    })}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Profile Info Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-white/5 rounded-xl p-4 border border-white/5 hover:bg-white/10 transition-all duration-200">
+                <div className="flex items-center gap-3">
+                  <UserIcon className="w-5 h-5 text-purple-400" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-gray-500 text-xs uppercase tracking-wider font-medium">
+                      Full Name
+                    </p>
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        value={formData.name}
+                        onChange={e =>
+                          setFormData({ ...formData, name: e.target.value })
+                        }
+                        className="w-full bg-transparent border-b border-purple-500/30 text-white text-sm font-medium outline-none focus:border-purple-500 transition-all duration-200 py-1"
+                        autoFocus
+                      />
+                    ) : (
+                      <p className="text-white text-sm font-medium truncate">
+                        {profile.name}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white/5 rounded-xl p-4 border border-white/5 hover:bg-white/10 transition-all duration-200">
+                <div className="flex items-center gap-3">
+                  <EnvelopeIcon className="w-5 h-5 text-pink-400" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-gray-500 text-xs uppercase tracking-wider font-medium">
+                      Email
+                    </p>
+                    {isEditing ? (
+                      <input
+                        type="email"
+                        value={formData.email}
+                        onChange={e =>
+                          setFormData({ ...formData, email: e.target.value })
+                        }
+                        className="w-full bg-transparent border-b border-purple-500/30 text-white text-sm font-medium outline-none focus:border-purple-500 transition-all duration-200 py-1"
+                      />
+                    ) : (
+                      <p className="text-white text-sm font-medium truncate">
+                        {profile.email}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white/5 rounded-xl p-4 border border-white/5 hover:bg-white/10 transition-all duration-200">
+                <div className="flex items-center gap-3">
+                  <PhoneIcon className="w-5 h-5 text-emerald-400" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-gray-500 text-xs uppercase tracking-wider font-medium">
+                      Phone
+                    </p>
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        value={formData.phone}
+                        onChange={e =>
+                          setFormData({ ...formData, phone: e.target.value })
+                        }
+                        className="w-full bg-transparent border-b border-purple-500/30 text-white text-sm font-medium outline-none focus:border-purple-500 transition-all duration-200 py-1"
+                      />
+                    ) : (
+                      <p className="text-white text-sm font-medium truncate">
+                        {profile.phone}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white/5 rounded-xl p-4 border border-white/5 hover:bg-white/10 transition-all duration-200">
+                <div className="flex items-center gap-3">
+                  <BuildingLibraryIcon className="w-5 h-5 text-blue-400" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-gray-500 text-xs uppercase tracking-wider font-medium">
+                      Department
+                    </p>
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        value={formData.department}
+                        onChange={e =>
+                          setFormData({
+                            ...formData,
+                            department: e.target.value,
+                          })
+                        }
+                        className="w-full bg-transparent border-b border-purple-500/30 text-white text-sm font-medium outline-none focus:border-purple-500 transition-all duration-200 py-1"
+                      />
+                    ) : (
+                      <p className="text-white text-sm font-medium truncate">
+                        {profile.department}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="md:col-span-2 bg-white/5 rounded-xl p-4 border border-white/5 hover:bg-white/10 transition-all duration-200">
+                <div className="flex items-start gap-3">
+                  <InformationCircleIcon className="w-5 h-5 text-yellow-400 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-gray-500 text-xs uppercase tracking-wider font-medium">
+                      Bio
+                    </p>
+                    {isEditing ? (
+                      <textarea
+                        value={formData.bio}
+                        onChange={e =>
+                          setFormData({ ...formData, bio: e.target.value })
+                        }
+                        rows="2"
+                        className="w-full bg-transparent border-b border-purple-500/30 text-white text-sm outline-none focus:border-purple-500 transition-all duration-200 py-1 resize-none"
+                      />
+                    ) : (
+                      <p className="text-gray-300 text-sm leading-relaxed">
+                        {profile.bio || 'No bio provided'}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Change Password Section */}
+            <div className="mt-6 pt-6 border-t border-white/10">
+              <button
+                onClick={() => setShowPasswordForm(!showPasswordForm)}
+                className="flex items-center gap-2 text-purple-400 hover:text-purple-300 transition-all duration-200 text-sm font-medium"
+              >
+                <ShieldCheckIcon className="w-5 h-5" />
+                {showPasswordForm ? 'Hide' : 'Change'} Password
+              </button>
+
+              {showPasswordForm && (
+                <form onSubmit={handlePasswordChange} className="mt-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <input
+                      type="password"
+                      placeholder="Current Password *"
+                      value={passwordData.currentPassword}
+                      onChange={e =>
+                        setPasswordData({
+                          ...passwordData,
+                          currentPassword: e.target.value,
+                        })
+                      }
+                      className="px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white text-sm placeholder-gray-500 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all duration-200"
+                      required
+                    />
+                    <input
+                      type="password"
+                      placeholder="New Password *"
+                      value={passwordData.newPassword}
+                      onChange={e =>
+                        setPasswordData({
+                          ...passwordData,
+                          newPassword: e.target.value,
+                        })
+                      }
+                      className="px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white text-sm placeholder-gray-500 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all duration-200"
+                      required
+                    />
+                    <input
+                      type="password"
+                      placeholder="Confirm Password *"
+                      value={passwordData.confirmPassword}
+                      onChange={e =>
+                        setPasswordData({
+                          ...passwordData,
+                          confirmPassword: e.target.value,
+                        })
+                      }
+                      className="px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white text-sm placeholder-gray-500 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all duration-200"
+                      required
+                    />
+                  </div>
+                  <div className="flex items-center gap-3 mt-4">
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="px-6 py-2.5 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl font-medium text-sm hover:scale-[1.02] transition-all duration-200 shadow-lg shadow-purple-500/25 disabled:opacity-50"
+                    >
+                      {loading ? 'Changing...' : 'Update Password'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowPasswordForm(false);
+                        setPasswordData({
+                          currentPassword: '',
+                          newPassword: '',
+                          confirmPassword: '',
+                        });
+                      }}
+                      className="px-6 py-2.5 bg-white/5 text-white rounded-xl font-medium text-sm hover:bg-white/10 transition-all duration-200 border border-white/10"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* CSS */}
+        <style>{`
+          @keyframes gradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+          }
+          .animate-gradient {
+            background-size: 200% auto;
+            animation: gradient 3s ease infinite;
+          }
+        `}</style>
       </div>
     </div>
   );

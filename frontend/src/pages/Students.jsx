@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import {
@@ -6,6 +6,15 @@ import {
   MagnifyingGlassIcon,
   TrashIcon,
   XMarkIcon,
+  ArrowPathIcon,
+  ChartBarIcon,
+  SparklesIcon,
+  EnvelopeIcon,
+  AcademicCapIcon,
+  UserGroupIcon,
+  CalendarIcon,
+  PhoneIcon,
+  UserIcon,
 } from '@heroicons/react/24/outline';
 
 const Students = () => {
@@ -13,6 +22,7 @@ const Students = () => {
   const [students, setStudents] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -40,18 +50,21 @@ const Students = () => {
     );
   });
 
-  const fetchStudents = async () => {
+  const fetchStudents = async (showRefresh = false) => {
     try {
+      if (showRefresh) setRefreshing(true);
+      else setLoading(true);
+
       const response = await api.get('/students');
-      if (response.data && response.data.data) {
-        setStudents(response.data.data);
-      } else {
-        setStudents([]);
-      }
+      const studentsData = response.data?.data || [];
+      setStudents(studentsData);
+      setError('');
     } catch (err) {
-      setError('Failed to fetch students');
+      console.error('Failed to fetch students:', err);
+      setError(err.response?.data?.message || 'Failed to fetch students');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -107,7 +120,6 @@ const Students = () => {
         gender: 'male',
       });
       await fetchStudents();
-      alert('✅ Student added successfully!');
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to create student');
     }
@@ -123,989 +135,585 @@ const Students = () => {
       try {
         await api.delete(`/students/${id}`);
         await fetchStudents();
-        alert('✅ Student deleted successfully!');
       } catch (err) {
         setError('Failed to delete student');
       }
     }
   };
 
+  const clearSearch = () => {
+    setSearchTerm('');
+  };
+
+  const getInitials = name => {
+    if (!name) return 'S';
+    return name.charAt(0).toUpperCase();
+  };
+
+  const getRandomColor = id => {
+    const colors = [
+      'from-purple-500 to-pink-500',
+      'from-blue-500 to-cyan-500',
+      'from-emerald-500 to-teal-500',
+      'from-orange-500 to-red-500',
+      'from-pink-500 to-rose-500',
+      'from-indigo-500 to-purple-500',
+    ];
+    const index = (id?.length || 0) % colors.length;
+    return colors[index];
+  };
+
   if (loading) {
     return (
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          height: '100vh',
-          color: 'white',
-        }}
-      >
-        <div style={{ textAlign: 'center' }}>
-          <div
-            style={{
-              width: '40px',
-              height: '40px',
-              border: '3px solid rgba(139, 92, 246, 0.2)',
-              borderTop: '3px solid #8b5cf6',
-              borderRadius: '50%',
-              animation: 'spin 1s linear infinite',
-              margin: '0 auto 1rem',
-            }}
-          />
-          <p style={{ color: '#9ca3af' }}>Loading students...</p>
+      <div className="flex items-center justify-center min-h-[70vh]">
+        <div className="text-center">
+          <div className="relative">
+            <div className="w-16 h-16 border-4 border-purple-500/20 border-t-purple-500 rounded-full animate-spin" />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <UserGroupIcon className="w-6 h-6 text-purple-400/50 animate-pulse" />
+            </div>
+          </div>
+          <p className="text-gray-400 mt-4 font-medium">Loading students...</p>
+          <p className="text-gray-500 text-sm mt-1">Please wait a moment</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div style={{ padding: '1.5rem', maxWidth: '1400px', margin: '0 auto' }}>
-      {/* Header */}
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '1rem',
-          marginBottom: '2rem',
-        }}
-      >
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            flexWrap: 'wrap',
-            gap: '1rem',
-          }}
-        >
-          <div>
-            <h1
-              style={{
-                fontSize: '2rem',
-                fontWeight: 'bold',
-                color: 'white',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.75rem',
-              }}
-            >
-              <span>Students</span>
-              <span
-                style={{
-                  fontSize: '0.875rem',
-                  background: 'rgba(139, 92, 246, 0.2)',
-                  color: '#a78bfa',
-                  padding: '0.25rem 0.75rem',
-                  borderRadius: '9999px',
-                  fontWeight: 'normal',
-                }}
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-900 to-black p-4 md:p-6">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="relative mb-10">
+          <div className="absolute -top-20 -right-20 w-64 h-64 bg-purple-500/10 rounded-full blur-3xl" />
+          <div className="absolute -bottom-20 -left-20 w-64 h-64 bg-pink-500/10 rounded-full blur-3xl" />
+
+          <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex items-start gap-4">
+              <div className="hidden md:flex w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 border border-purple-500/20 items-center justify-center backdrop-blur-sm">
+                <UserGroupIcon className="w-7 h-7 text-purple-400" />
+              </div>
+              <div>
+                <div className="flex items-center gap-3 flex-wrap">
+                  <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-purple-400 via-pink-400 to-purple-400 bg-clip-text text-transparent animate-gradient">
+                    Student Management
+                  </h1>
+                  <div className="flex items-center gap-1 px-3 py-1 bg-purple-500/20 rounded-full border border-purple-500/20">
+                    <SparklesIcon className="w-3.5 h-3.5 text-purple-400" />
+                    <span className="text-purple-400 text-xs font-medium">
+                      {students.length} Students
+                    </span>
+                  </div>
+                </div>
+                <div className="flex flex-wrap items-center gap-3 mt-1.5">
+                  <p className="text-gray-400 text-sm flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />
+                    Manage all student profiles and their details
+                  </p>
+                  <span className="hidden sm:flex text-xs text-gray-500">
+                    • {students.filter(s => s.status !== 'inactive').length}{' '}
+                    active
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 flex-wrap">
+              <button
+                onClick={() => fetchStudents(true)}
+                disabled={refreshing}
+                className="flex items-center gap-2 px-4 py-2.5 bg-white/5 hover:bg-white/10 rounded-xl text-gray-300 hover:text-white transition-all duration-200 border border-white/10 hover:border-white/20 disabled:opacity-50 backdrop-blur-sm"
               >
-                {students.length}
-              </span>
-            </h1>
-            <p
-              style={{
-                color: '#9ca3af',
-                fontSize: '0.875rem',
-                marginTop: '0.25rem',
-              }}
-            >
-              Role:{' '}
-              <span style={{ color: '#a78bfa', textTransform: 'capitalize' }}>
-                {user?.role}
-              </span>
-            </p>
+                <ArrowPathIcon
+                  className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`}
+                />
+                {refreshing ? 'Refreshing...' : 'Refresh'}
+              </button>
+              {canManageStudents && (
+                <button
+                  onClick={() => setShowModal(true)}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl font-medium text-sm hover:scale-[1.02] transition-all duration-200 shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40"
+                >
+                  <UserPlusIcon className="w-5 h-5" />
+                  Add Student
+                </button>
+              )}
+            </div>
           </div>
-          {canManageStudents && (
-            <button
-              onClick={() => setShowModal(true)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                padding: '0.6rem 1.5rem',
-                background: 'linear-gradient(135deg, #8b5cf6, #ec4899)',
-                color: 'white',
-                borderRadius: '0.5rem',
-                border: 'none',
-                cursor: 'pointer',
-                fontWeight: '600',
-                fontSize: '0.875rem',
-                transition: 'all 0.3s ease',
-                boxShadow: '0 4px 15px rgba(139, 92, 246, 0.3)',
-              }}
-              onMouseEnter={e => {
-                e.currentTarget.style.transform = 'translateY(-2px)';
-                e.currentTarget.style.boxShadow =
-                  '0 6px 25px rgba(139, 92, 246, 0.4)';
-              }}
-              onMouseLeave={e => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow =
-                  '0 4px 15px rgba(139, 92, 246, 0.3)';
-              }}
-            >
-              <UserPlusIcon style={{ width: '1.25rem', height: '1.25rem' }} />
-              <span>Add Student</span>
-            </button>
-          )}
         </div>
 
-        {/* Search Bar */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.75rem',
-            background: 'rgba(255, 255, 255, 0.05)',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
-            borderRadius: '0.5rem',
-            padding: '0.5rem 1rem',
-            maxWidth: '400px',
-            transition: 'all 0.3s ease',
-          }}
-        >
-          <MagnifyingGlassIcon
-            style={{ width: '1.25rem', height: '1.25rem', color: '#6b7280' }}
-          />
+        {error && (
+          <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-xl mb-6 text-sm flex items-center gap-2">
+            <XMarkIcon className="w-5 h-5" />
+            {error}
+          </div>
+        )}
+
+        {/* Search Bar - Fixed Background Issue */}
+        <div className="relative max-w-md mb-6">
+          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+            <MagnifyingGlassIcon className="w-5 h-5 text-gray-400" />
+          </div>
           <input
             type="text"
-            placeholder="Search students..."
+            placeholder="Search students by name, ID, or email..."
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
-            style={{
-              flex: 1,
-              background: 'transparent',
-              border: 'none',
-              outline: 'none',
-              color: 'white',
-              fontSize: '0.875rem',
-              padding: '0.25rem 0',
-            }}
+            className="w-full pl-11 pr-12 py-3 bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl text-white text-sm placeholder-gray-400 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 transition-all duration-300"
+            style={{ backgroundColor: 'rgba(255, 255, 255, 0.05)' }}
           />
           {searchTerm && (
             <button
-              onClick={() => setSearchTerm('')}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                color: '#6b7280',
-                cursor: 'pointer',
-                padding: '0.25rem',
-              }}
+              onClick={clearSearch}
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 hover:bg-white/10 rounded-lg transition-colors duration-200 text-gray-400 hover:text-white group"
             >
-              <XMarkIcon style={{ width: '1.25rem', height: '1.25rem' }} />
+              <XMarkIcon className="w-5 h-5 group-hover:rotate-90 transition-transform duration-300" />
             </button>
           )}
         </div>
-      </div>
 
-      {error && (
-        <div
-          style={{
-            background: 'rgba(239, 68, 68, 0.15)',
-            color: '#f87171',
-            padding: '0.75rem 1rem',
-            borderRadius: '0.5rem',
-            marginBottom: '1rem',
-            fontSize: '0.875rem',
-            border: '1px solid rgba(239, 68, 68, 0.2)',
-          }}
-        >
-          {error}
-        </div>
-      )}
-
-      {/* Table */}
-      <div
-        style={{
-          background: 'rgba(255, 255, 255, 0.03)',
-          backdropFilter: 'blur(20px)',
-          borderRadius: '1rem',
-          border: '1px solid rgba(255, 255, 255, 0.06)',
-          overflow: 'hidden',
-        }}
-      >
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr
-                style={{
-                  borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
-                  background: 'rgba(255, 255, 255, 0.02)',
-                }}
-              >
-                <th
-                  style={{
-                    padding: '0.75rem 1rem',
-                    textAlign: 'left',
-                    color: '#9ca3af',
-                    fontSize: '0.75rem',
-                    fontWeight: '600',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.05em',
-                  }}
-                >
-                  ID
-                </th>
-                <th
-                  style={{
-                    padding: '0.75rem 1rem',
-                    textAlign: 'left',
-                    color: '#9ca3af',
-                    fontSize: '0.75rem',
-                    fontWeight: '600',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.05em',
-                  }}
-                >
-                  Student
-                </th>
-                <th
-                  style={{
-                    padding: '0.75rem 1rem',
-                    textAlign: 'left',
-                    color: '#9ca3af',
-                    fontSize: '0.75rem',
-                    fontWeight: '600',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.05em',
-                  }}
-                >
-                  Email
-                </th>
-                <th
-                  style={{
-                    padding: '0.75rem 1rem',
-                    textAlign: 'left',
-                    color: '#9ca3af',
-                    fontSize: '0.75rem',
-                    fontWeight: '600',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.05em',
-                  }}
-                >
-                  Semester
-                </th>
-                <th
-                  style={{
-                    padding: '0.75rem 1rem',
-                    textAlign: 'left',
-                    color: '#9ca3af',
-                    fontSize: '0.75rem',
-                    fontWeight: '600',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.05em',
-                  }}
-                >
-                  Status
-                </th>
-                <th
-                  style={{
-                    padding: '0.75rem 1rem',
-                    textAlign: 'right',
-                    color: '#9ca3af',
-                    fontSize: '0.75rem',
-                    fontWeight: '600',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.05em',
-                  }}
-                >
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredStudents && filteredStudents.length > 0 ? (
-                filteredStudents.map((student, index) => (
-                  <tr
-                    key={student._id}
-                    style={{
-                      borderBottom:
-                        index === filteredStudents.length - 1
-                          ? 'none'
-                          : '1px solid rgba(255, 255, 255, 0.04)',
-                      transition: 'all 0.2s ease',
-                    }}
-                    onMouseEnter={e => {
-                      e.currentTarget.style.background =
-                        'rgba(255, 255, 255, 0.03)';
-                    }}
-                    onMouseLeave={e => {
-                      e.currentTarget.style.background = 'transparent';
-                    }}
-                  >
-                    <td
-                      style={{
-                        padding: '0.75rem 1rem',
-                        color: '#9ca3af',
-                        fontSize: '0.875rem',
-                        fontFamily: 'monospace',
-                      }}
+        {/* Table */}
+        <div className="bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 overflow-hidden shadow-2xl shadow-purple-500/5">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-white/5 border-b border-white/10">
+                  <th className="px-4 py-4 text-left text-gray-400 font-medium text-xs uppercase tracking-wider">
+                    ID
+                  </th>
+                  <th className="px-4 py-4 text-left text-gray-400 font-medium text-xs uppercase tracking-wider">
+                    <div className="flex items-center gap-2">
+                      <UserIcon className="w-3.5 h-3.5" />
+                      Student
+                    </div>
+                  </th>
+                  <th className="px-4 py-4 text-left text-gray-400 font-medium text-xs uppercase tracking-wider">
+                    <div className="flex items-center gap-2">
+                      <EnvelopeIcon className="w-3.5 h-3.5" />
+                      Email
+                    </div>
+                  </th>
+                  <th className="px-4 py-4 text-left text-gray-400 font-medium text-xs uppercase tracking-wider">
+                    <div className="flex items-center gap-2">
+                      <AcademicCapIcon className="w-3.5 h-3.5" />
+                      Semester
+                    </div>
+                  </th>
+                  <th className="px-4 py-4 text-left text-gray-400 font-medium text-xs uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-4 py-4 text-right text-gray-400 font-medium text-xs uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5">
+                {filteredStudents.length > 0 ? (
+                  filteredStudents.map((student, index) => (
+                    <tr
+                      key={student._id}
+                      className="hover:bg-white/5 transition-all duration-200 group"
                     >
-                      {student.studentId}
-                    </td>
-                    <td style={{ padding: '0.75rem 1rem' }}>
-                      <div
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.75rem',
-                        }}
-                      >
-                        <div
-                          style={{
-                            width: '2.25rem',
-                            height: '2.25rem',
-                            borderRadius: '50%',
-                            background: `linear-gradient(135deg, ${student._id ? '#8b5cf6' : '#6b7280'}, ${student._id ? '#ec4899' : '#4b5563'})`,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            color: 'white',
-                            fontSize: '0.75rem',
-                            fontWeight: '600',
-                          }}
-                        >
-                          {student.user?.name?.charAt(0) || 'S'}
-                        </div>
-                        <span style={{ color: 'white', fontSize: '0.875rem' }}>
-                          {student.user?.name || 'N/A'}
-                        </span>
-                      </div>
-                    </td>
-                    <td
-                      style={{
-                        padding: '0.75rem 1rem',
-                        color: '#9ca3af',
-                        fontSize: '0.875rem',
-                      }}
-                    >
-                      {student.user?.email || 'N/A'}
-                    </td>
-                    <td
-                      style={{
-                        padding: '0.75rem 1rem',
-                        color: 'white',
-                        fontSize: '0.875rem',
-                      }}
-                    >
-                      Semester {student.semester}
-                    </td>
-                    <td style={{ padding: '0.75rem 1rem' }}>
-                      <span
-                        style={{
-                          display: 'inline-block',
-                          padding: '0.2rem 0.6rem',
-                          borderRadius: '9999px',
-                          fontSize: '0.7rem',
-                          fontWeight: '600',
-                          background:
-                            student.status === 'active'
-                              ? 'rgba(34, 197, 94, 0.15)'
-                              : 'rgba(239, 68, 68, 0.15)',
-                          color:
-                            student.status === 'active' ? '#4ade80' : '#f87171',
-                        }}
-                      >
-                        {student.status || 'active'}
-                      </span>
-                    </td>
-                    <td style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>
-                      <div
-                        style={{
-                          display: 'flex',
-                          justifyContent: 'flex-end',
-                          gap: '0.25rem',
-                        }}
-                      >
-                        {isAdmin() && (
-                          <button
-                            onClick={() => handleDelete(student._id)}
-                            style={{
-                              padding: '0.3rem 0.6rem',
-                              borderRadius: '0.375rem',
-                              background: 'transparent',
-                              color: '#f87171',
-                              border: 'none',
-                              cursor: 'pointer',
-                              fontSize: '0.75rem',
-                              transition: 'all 0.2s ease',
-                            }}
-                            onMouseEnter={e => {
-                              e.currentTarget.style.background =
-                                'rgba(239, 68, 68, 0.15)';
-                            }}
-                            onMouseLeave={e => {
-                              e.currentTarget.style.background = 'transparent';
-                            }}
+                      <td className="px-4 py-3.5 text-gray-400 text-xs font-mono">
+                        {student.studentId}
+                      </td>
+                      <td className="px-4 py-3.5">
+                        <div className="flex items-center gap-3">
+                          <div
+                            className={`w-8 h-8 rounded-full bg-gradient-to-r ${getRandomColor(student._id)} flex items-center justify-center text-white text-xs font-bold`}
                           >
-                            <TrashIcon
-                              style={{ width: '1rem', height: '1rem' }}
-                            />
-                          </button>
-                        )}
-                        {!isAdmin() && (
-                          <span
-                            style={{ color: '#6b7280', fontSize: '0.75rem' }}
-                          >
-                            View Only
+                            {getInitials(student.user?.name)}
+                          </div>
+                          <span className="text-white font-medium group-hover:text-purple-400 transition-colors duration-200">
+                            {student.user?.name || 'N/A'}
                           </span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3.5 text-gray-400 text-xs">
+                        {student.user?.email || 'N/A'}
+                      </td>
+                      <td className="px-4 py-3.5">
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-white/5 rounded-lg text-white text-xs">
+                          <span className="w-1.5 h-1.5 bg-purple-400 rounded-full" />
+                          Sem {student.semester}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3.5">
+                        <span
+                          className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border ${
+                            student.status === 'active'
+                              ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                              : 'bg-red-500/10 text-red-400 border-red-500/20'
+                          }`}
+                        >
+                          <span
+                            className={`w-1.5 h-1.5 rounded-full ${
+                              student.status === 'active'
+                                ? 'bg-emerald-400'
+                                : 'bg-red-400'
+                            }`}
+                          />
+                          {student.status || 'active'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3.5 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          {isAdmin() && (
+                            <button
+                              onClick={() => handleDelete(student._id)}
+                              className="p-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 transition-all duration-200"
+                            >
+                              <TrashIcon className="w-4 h-4" />
+                            </button>
+                          )}
+                          {!isAdmin() && (
+                            <span className="text-gray-500 text-xs">
+                              View Only
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="6" className="px-4 py-16 text-center">
+                      <div className="flex flex-col items-center">
+                        <div className="w-20 h-20 bg-white/5 rounded-2xl flex items-center justify-center mb-4">
+                          <UserGroupIcon className="w-10 h-10 text-gray-600" />
+                        </div>
+                        <p className="text-gray-400 text-lg font-medium">
+                          {searchTerm
+                            ? 'No students match your search'
+                            : 'No students found'}
+                        </p>
+                        <p className="text-gray-500 text-sm mt-1">
+                          {searchTerm
+                            ? 'Try adjusting your search terms'
+                            : 'Click "Add Student" to create your first student profile'}
+                        </p>
+                        {searchTerm && (
+                          <button
+                            onClick={clearSearch}
+                            className="mt-4 px-6 py-2 bg-purple-500/20 hover:bg-purple-500/30 rounded-lg text-purple-400 text-sm transition-all duration-200"
+                          >
+                            Clear search
+                          </button>
                         )}
                       </div>
                     </td>
                   </tr>
-                ))
-              ) : (
-                <tr>
-                  <td
-                    colSpan="6"
-                    style={{
-                      textAlign: 'center',
-                      padding: '3rem',
-                      color: '#6b7280',
-                      fontSize: '0.875rem',
-                    }}
-                  >
-                    {searchTerm
-                      ? 'No students match your search'
-                      : 'No students found. Click "Add Student" to create one.'}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Add Student Modal */}
-      {showModal && canManageStudents && (
-        <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(0, 0, 0, 0.7)',
-            backdropFilter: 'blur(4px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-            padding: '1rem',
-            animation: 'fadeIn 0.3s ease',
-          }}
-        >
-          <div
-            style={{
-              background: '#1a1a1a',
-              borderRadius: '1rem',
-              maxWidth: '560px',
-              width: '100%',
-              maxHeight: '90vh',
-              overflow: 'auto',
-              border: '1px solid rgba(255, 255, 255, 0.06)',
-              padding: '2rem',
-              boxShadow: '0 25px 50px rgba(0, 0, 0, 0.5)',
-            }}
-          >
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                marginBottom: '1.5rem',
-              }}
-            >
-              <h2
-                style={{
-                  color: 'white',
-                  fontSize: '1.25rem',
-                  fontWeight: 'bold',
-                }}
-              >
-                Add New Student
-              </h2>
-              <button
-                onClick={() => setShowModal(false)}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  color: '#6b7280',
-                  cursor: 'pointer',
-                  padding: '0.25rem',
-                  borderRadius: '0.375rem',
-                  transition: 'all 0.2s ease',
-                }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.background =
-                    'rgba(255, 255, 255, 0.05)';
-                  e.currentTarget.style.color = 'white';
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.background = 'transparent';
-                  e.currentTarget.style.color = '#6b7280';
-                }}
-              >
-                <XMarkIcon style={{ width: '1.5rem', height: '1.5rem' }} />
-              </button>
-            </div>
-
-            <form onSubmit={handleCreate}>
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr 1fr',
-                  gap: '0.75rem',
-                }}
-              >
-                <input
-                  name="name"
-                  placeholder="Full Name *"
-                  value={formData.name}
-                  onChange={handleChange}
-                  style={{
-                    gridColumn: '1 / -1',
-                    padding: '0.75rem',
-                    background: 'rgba(255,255,255,0.05)',
-                    border: '1px solid rgba(255,255,255,0.06)',
-                    borderRadius: '0.5rem',
-                    color: 'white',
-                    outline: 'none',
-                    fontSize: '0.875rem',
-                    transition: 'all 0.2s ease',
-                  }}
-                  onFocus={e => {
-                    e.currentTarget.style.borderColor = '#8b5cf6';
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
-                  }}
-                  onBlur={e => {
-                    e.currentTarget.style.borderColor =
-                      'rgba(255,255,255,0.06)';
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
-                  }}
-                  required
-                />
-                <input
-                  name="email"
-                  type="email"
-                  placeholder="Email *"
-                  value={formData.email}
-                  onChange={handleChange}
-                  style={{
-                    gridColumn: '1 / -1',
-                    padding: '0.75rem',
-                    background: 'rgba(255,255,255,0.05)',
-                    border: '1px solid rgba(255,255,255,0.06)',
-                    borderRadius: '0.5rem',
-                    color: 'white',
-                    outline: 'none',
-                    fontSize: '0.875rem',
-                    transition: 'all 0.2s ease',
-                  }}
-                  onFocus={e => {
-                    e.currentTarget.style.borderColor = '#8b5cf6';
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
-                  }}
-                  onBlur={e => {
-                    e.currentTarget.style.borderColor =
-                      'rgba(255,255,255,0.06)';
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
-                  }}
-                  required
-                />
-                <input
-                  name="password"
-                  type="password"
-                  placeholder="Password *"
-                  value={formData.password}
-                  onChange={handleChange}
-                  style={{
-                    gridColumn: '1 / -1',
-                    padding: '0.75rem',
-                    background: 'rgba(255,255,255,0.05)',
-                    border: '1px solid rgba(255,255,255,0.06)',
-                    borderRadius: '0.5rem',
-                    color: 'white',
-                    outline: 'none',
-                    fontSize: '0.875rem',
-                    transition: 'all 0.2s ease',
-                  }}
-                  onFocus={e => {
-                    e.currentTarget.style.borderColor = '#8b5cf6';
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
-                  }}
-                  onBlur={e => {
-                    e.currentTarget.style.borderColor =
-                      'rgba(255,255,255,0.06)';
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
-                  }}
-                  required
-                />
-                <input
-                  name="studentId"
-                  placeholder="Student ID *"
-                  value={formData.studentId}
-                  onChange={handleChange}
-                  style={{
-                    gridColumn: '1 / -1',
-                    padding: '0.75rem',
-                    background: 'rgba(255,255,255,0.05)',
-                    border: '1px solid rgba(255,255,255,0.06)',
-                    borderRadius: '0.5rem',
-                    color: 'white',
-                    outline: 'none',
-                    fontSize: '0.875rem',
-                    transition: 'all 0.2s ease',
-                  }}
-                  onFocus={e => {
-                    e.currentTarget.style.borderColor = '#8b5cf6';
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
-                  }}
-                  onBlur={e => {
-                    e.currentTarget.style.borderColor =
-                      'rgba(255,255,255,0.06)';
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
-                  }}
-                  required
-                />
-
-                {/* Fixed: Select Department - White Text Issue Fixed */}
-                <select
-                  name="department"
-                  value={formData.department}
-                  onChange={handleChange}
-                  style={{
-                    gridColumn: '1 / -1',
-                    padding: '0.75rem',
-                    background: 'rgba(255,255,255,0.05)',
-                    border: '1px solid rgba(255,255,255,0.06)',
-                    borderRadius: '0.5rem',
-                    color: 'white',
-                    outline: 'none',
-                    fontSize: '0.875rem',
-                    transition: 'all 0.2s ease',
-                    appearance: 'auto',
-                    WebkitAppearance: 'auto',
-                    MozAppearance: 'auto',
-                  }}
-                  onFocus={e => {
-                    e.currentTarget.style.borderColor = '#8b5cf6';
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
-                  }}
-                  onBlur={e => {
-                    e.currentTarget.style.borderColor =
-                      'rgba(255,255,255,0.06)';
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
-                  }}
-                  required
-                >
-                  <option
-                    value=""
-                    style={{ background: '#1a1a1a', color: '#9ca3af' }}
-                  >
-                    Select Department *
-                  </option>
-                  {departments.map(dept => (
-                    <option
-                      key={dept._id}
-                      value={dept._id}
-                      style={{
-                        background: '#1a1a1a',
-                        color: 'white',
-                        padding: '0.5rem',
-                      }}
-                    >
-                      {dept.name} ({dept.code})
-                    </option>
-                  ))}
-                </select>
-
-                <input
-                  name="semester"
-                  type="number"
-                  placeholder="Semester *"
-                  value={formData.semester}
-                  onChange={handleChange}
-                  style={{
-                    padding: '0.75rem',
-                    background: 'rgba(255,255,255,0.05)',
-                    border: '1px solid rgba(255,255,255,0.06)',
-                    borderRadius: '0.5rem',
-                    color: 'white',
-                    outline: 'none',
-                    fontSize: '0.875rem',
-                    transition: 'all 0.2s ease',
-                  }}
-                  onFocus={e => {
-                    e.currentTarget.style.borderColor = '#8b5cf6';
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
-                  }}
-                  onBlur={e => {
-                    e.currentTarget.style.borderColor =
-                      'rgba(255,255,255,0.06)';
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
-                  }}
-                  required
-                />
-                <input
-                  name="batch"
-                  placeholder="Batch *"
-                  value={formData.batch}
-                  onChange={handleChange}
-                  style={{
-                    padding: '0.75rem',
-                    background: 'rgba(255,255,255,0.05)',
-                    border: '1px solid rgba(255,255,255,0.06)',
-                    borderRadius: '0.5rem',
-                    color: 'white',
-                    outline: 'none',
-                    fontSize: '0.875rem',
-                    transition: 'all 0.2s ease',
-                  }}
-                  onFocus={e => {
-                    e.currentTarget.style.borderColor = '#8b5cf6';
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
-                  }}
-                  onBlur={e => {
-                    e.currentTarget.style.borderColor =
-                      'rgba(255,255,255,0.06)';
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
-                  }}
-                  required
-                />
-
-                <input
-                  name="guardian.name"
-                  placeholder="Guardian Name *"
-                  value={formData.guardian.name}
-                  onChange={handleChange}
-                  style={{
-                    gridColumn: '1 / -1',
-                    padding: '0.75rem',
-                    background: 'rgba(255,255,255,0.05)',
-                    border: '1px solid rgba(255,255,255,0.06)',
-                    borderRadius: '0.5rem',
-                    color: 'white',
-                    outline: 'none',
-                    fontSize: '0.875rem',
-                    transition: 'all 0.2s ease',
-                  }}
-                  onFocus={e => {
-                    e.currentTarget.style.borderColor = '#8b5cf6';
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
-                  }}
-                  onBlur={e => {
-                    e.currentTarget.style.borderColor =
-                      'rgba(255,255,255,0.06)';
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
-                  }}
-                  required
-                />
-                <input
-                  name="guardian.relation"
-                  placeholder="Guardian Relation *"
-                  value={formData.guardian.relation}
-                  onChange={handleChange}
-                  style={{
-                    padding: '0.75rem',
-                    background: 'rgba(255,255,255,0.05)',
-                    border: '1px solid rgba(255,255,255,0.06)',
-                    borderRadius: '0.5rem',
-                    color: 'white',
-                    outline: 'none',
-                    fontSize: '0.875rem',
-                    transition: 'all 0.2s ease',
-                  }}
-                  onFocus={e => {
-                    e.currentTarget.style.borderColor = '#8b5cf6';
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
-                  }}
-                  onBlur={e => {
-                    e.currentTarget.style.borderColor =
-                      'rgba(255,255,255,0.06)';
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
-                  }}
-                  required
-                />
-                <input
-                  name="guardian.phone"
-                  placeholder="Guardian Phone *"
-                  value={formData.guardian.phone}
-                  onChange={handleChange}
-                  style={{
-                    gridColumn: '1 / -1',
-                    padding: '0.75rem',
-                    background: 'rgba(255,255,255,0.05)',
-                    border: '1px solid rgba(255,255,255,0.06)',
-                    borderRadius: '0.5rem',
-                    color: 'white',
-                    outline: 'none',
-                    fontSize: '0.875rem',
-                    transition: 'all 0.2s ease',
-                  }}
-                  onFocus={e => {
-                    e.currentTarget.style.borderColor = '#8b5cf6';
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
-                  }}
-                  onBlur={e => {
-                    e.currentTarget.style.borderColor =
-                      'rgba(255,255,255,0.06)';
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
-                  }}
-                  required
-                />
-
-                <input
-                  name="dateOfBirth"
-                  type="date"
-                  placeholder="Date of Birth *"
-                  value={formData.dateOfBirth}
-                  onChange={handleChange}
-                  style={{
-                    gridColumn: '1 / -1',
-                    padding: '0.75rem',
-                    background: 'rgba(255,255,255,0.05)',
-                    border: '1px solid rgba(255,255,255,0.06)',
-                    borderRadius: '0.5rem',
-                    color: 'white',
-                    outline: 'none',
-                    fontSize: '0.875rem',
-                    transition: 'all 0.2s ease',
-                  }}
-                  onFocus={e => {
-                    e.currentTarget.style.borderColor = '#8b5cf6';
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
-                  }}
-                  onBlur={e => {
-                    e.currentTarget.style.borderColor =
-                      'rgba(255,255,255,0.06)';
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
-                  }}
-                  required
-                />
-
-                <select
-                  name="gender"
-                  value={formData.gender}
-                  onChange={handleChange}
-                  style={{
-                    gridColumn: '1 / -1',
-                    padding: '0.75rem',
-                    background: 'rgba(255,255,255,0.05)',
-                    border: '1px solid rgba(255,255,255,0.06)',
-                    borderRadius: '0.5rem',
-                    color: 'white',
-                    outline: 'none',
-                    fontSize: '0.875rem',
-                    transition: 'all 0.2s ease',
-                    appearance: 'auto',
-                    WebkitAppearance: 'auto',
-                    MozAppearance: 'auto',
-                  }}
-                  onFocus={e => {
-                    e.currentTarget.style.borderColor = '#8b5cf6';
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
-                  }}
-                  onBlur={e => {
-                    e.currentTarget.style.borderColor =
-                      'rgba(255,255,255,0.06)';
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
-                  }}
-                  required
-                >
-                  <option
-                    value="male"
-                    style={{ background: '#1a1a1a', color: 'white' }}
-                  >
-                    Male
-                  </option>
-                  <option
-                    value="female"
-                    style={{ background: '#1a1a1a', color: 'white' }}
-                  >
-                    Female
-                  </option>
-                  <option
-                    value="other"
-                    style={{ background: '#1a1a1a', color: 'white' }}
-                  >
-                    Other
-                  </option>
-                </select>
-              </div>
-
-              <div
-                style={{ display: 'flex', gap: '0.75rem', marginTop: '1.5rem' }}
-              >
-                <button
-                  type="submit"
-                  style={{
-                    flex: 1,
-                    padding: '0.75rem',
-                    background: 'linear-gradient(135deg, #8b5cf6, #ec4899)',
-                    color: 'white',
-                    borderRadius: '0.5rem',
-                    border: 'none',
-                    cursor: 'pointer',
-                    fontWeight: '600',
-                    fontSize: '0.875rem',
-                    transition: 'all 0.3s ease',
-                  }}
-                  onMouseEnter={e => {
-                    e.currentTarget.style.transform = 'translateY(-1px)';
-                    e.currentTarget.style.boxShadow =
-                      '0 4px 15px rgba(139, 92, 246, 0.3)';
-                  }}
-                  onMouseLeave={e => {
-                    e.currentTarget.style.transform = 'translateY(0)';
-                    e.currentTarget.style.boxShadow = 'none';
-                  }}
-                >
-                  Add Student
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  style={{
-                    flex: 1,
-                    padding: '0.75rem',
-                    background: 'rgba(255,255,255,0.05)',
-                    color: 'white',
-                    borderRadius: '0.5rem',
-                    border: '1px solid rgba(255,255,255,0.06)',
-                    cursor: 'pointer',
-                    fontWeight: '500',
-                    fontSize: '0.875rem',
-                    transition: 'all 0.2s ease',
-                  }}
-                  onMouseEnter={e => {
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
-                  }}
-                  onMouseLeave={e => {
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
-                  }}
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
+                )}
+              </tbody>
+            </table>
           </div>
-        </div>
-      )}
 
-      <style>{`
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-      `}</style>
+          {/* Footer */}
+          {students.length > 0 && (
+            <div className="px-6 py-4 bg-white/5 border-t border-white/10">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <p className="text-gray-400 text-sm">
+                  Showing{' '}
+                  <span className="text-white font-medium">
+                    {filteredStudents.length}
+                  </span>{' '}
+                  of{' '}
+                  <span className="text-white font-medium">
+                    {students.length}
+                  </span>{' '}
+                  students
+                </p>
+                <div className="flex items-center gap-4 text-sm">
+                  <span className="flex items-center gap-1.5 text-purple-400">
+                    <UserGroupIcon className="w-4 h-4" />
+                    Total:{' '}
+                    <span className="font-medium">{students.length}</span>
+                  </span>
+                  <span className="flex items-center gap-1.5 text-emerald-400">
+                    <ChartBarIcon className="w-4 h-4" />
+                    Active:{' '}
+                    <span className="font-medium">
+                      {students.filter(s => s.status !== 'inactive').length}
+                    </span>
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Add Student Modal */}
+        {showModal && canManageStudents && (
+          <div
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn"
+            onClick={e => e.target === e.currentTarget && setShowModal(false)}
+          >
+            <div className="bg-gray-900 rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto border border-white/10 shadow-2xl">
+              <div className="sticky top-0 bg-gray-900/95 backdrop-blur-sm border-b border-white/10 px-6 py-4 flex items-center justify-between">
+                <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                  <UserPlusIcon className="w-5 h-5 text-purple-400" />
+                  Add New Student
+                </h2>
+                <button
+                  onClick={() => setShowModal(false)}
+                  className="p-1.5 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white transition"
+                >
+                  <XMarkIcon className="w-6 h-6" />
+                </button>
+              </div>
+
+              <form onSubmit={handleCreate} className="p-6 space-y-4">
+                <div>
+                  <label className="block text-gray-400 text-sm font-medium mb-1.5">
+                    Full Name *
+                  </label>
+                  <input
+                    name="name"
+                    placeholder="e.g., John Doe"
+                    value={formData.name}
+                    onChange={handleChange}
+                    className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:border-purple-500 transition"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-gray-400 text-sm font-medium mb-1.5">
+                    Email *
+                  </label>
+                  <input
+                    name="email"
+                    type="email"
+                    placeholder="student@university.edu"
+                    value={formData.email}
+                    onChange={handleChange}
+                    className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:border-purple-500 transition"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-gray-400 text-sm font-medium mb-1.5">
+                    Password *
+                  </label>
+                  <input
+                    name="password"
+                    type="password"
+                    placeholder="••••••••"
+                    value={formData.password}
+                    onChange={handleChange}
+                    className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:border-purple-500 transition"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-gray-400 text-sm font-medium mb-1.5">
+                    Student ID *
+                  </label>
+                  <input
+                    name="studentId"
+                    placeholder="e.g., STU2024001"
+                    value={formData.studentId}
+                    onChange={handleChange}
+                    className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:border-purple-500 transition"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-gray-400 text-sm font-medium mb-1.5">
+                    Department *
+                  </label>
+                  <select
+                    name="department"
+                    value={formData.department}
+                    onChange={handleChange}
+                    className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-purple-500 transition appearance-auto"
+                    required
+                  >
+                    <option value="" className="bg-gray-900 text-gray-400">
+                      Select Department
+                    </option>
+                    {departments.map(dept => (
+                      <option
+                        key={dept._id}
+                        value={dept._id}
+                        className="bg-gray-900 text-white"
+                      >
+                        {dept.name} ({dept.code})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-gray-400 text-sm font-medium mb-1.5">
+                      Semester *
+                    </label>
+                    <input
+                      name="semester"
+                      type="number"
+                      min="1"
+                      max="12"
+                      value={formData.semester}
+                      onChange={handleChange}
+                      className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-purple-500 transition"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-gray-400 text-sm font-medium mb-1.5">
+                      Batch *
+                    </label>
+                    <input
+                      name="batch"
+                      placeholder="e.g., 2024"
+                      value={formData.batch}
+                      onChange={handleChange}
+                      className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:border-purple-500 transition"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-gray-400 text-sm font-medium mb-1.5">
+                    Guardian Name *
+                  </label>
+                  <input
+                    name="guardian.name"
+                    placeholder="Guardian full name"
+                    value={formData.guardian.name}
+                    onChange={handleChange}
+                    className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:border-purple-500 transition"
+                    required
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-gray-400 text-sm font-medium mb-1.5">
+                      Guardian Relation *
+                    </label>
+                    <input
+                      name="guardian.relation"
+                      placeholder="e.g., Father, Mother"
+                      value={formData.guardian.relation}
+                      onChange={handleChange}
+                      className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:border-purple-500 transition"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-gray-400 text-sm font-medium mb-1.5">
+                      Guardian Phone *
+                    </label>
+                    <input
+                      name="guardian.phone"
+                      placeholder="Phone number"
+                      value={formData.guardian.phone}
+                      onChange={handleChange}
+                      className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:border-purple-500 transition"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-gray-400 text-sm font-medium mb-1.5">
+                      Date of Birth *
+                    </label>
+                    <input
+                      name="dateOfBirth"
+                      type="date"
+                      value={formData.dateOfBirth}
+                      onChange={handleChange}
+                      className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-purple-500 transition"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-gray-400 text-sm font-medium mb-1.5">
+                      Gender *
+                    </label>
+                    <select
+                      name="gender"
+                      value={formData.gender}
+                      onChange={handleChange}
+                      className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-purple-500 transition appearance-auto"
+                    >
+                      <option value="male" className="bg-gray-900 text-white">
+                        Male
+                      </option>
+                      <option value="female" className="bg-gray-900 text-white">
+                        Female
+                      </option>
+                      <option value="other" className="bg-gray-900 text-white">
+                        Other
+                      </option>
+                    </select>
+                  </div>
+                </div>
+
+                {error && (
+                  <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-2 rounded-lg text-sm">
+                    {error}
+                  </div>
+                )}
+
+                <div className="flex gap-3 pt-2">
+                  <button
+                    type="submit"
+                    className="flex-1 px-4 py-2.5 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg font-medium hover:scale-[1.02] transition-all duration-200 shadow-lg shadow-purple-500/25"
+                  >
+                    Add Student
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowModal(false)}
+                    className="flex-1 px-4 py-2.5 bg-white/5 text-white rounded-lg font-medium hover:bg-white/10 transition"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* CSS */}
+        <style>{`
+          @keyframes gradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+          }
+          .animate-gradient {
+            background-size: 200% auto;
+            animation: gradient 3s ease infinite;
+          }
+          @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+          }
+          .animate-fadeIn {
+            animation: fadeIn 0.2s ease-out;
+          }
+          /* Fix for input background on autofill */
+          input:-webkit-autofill,
+          input:-webkit-autofill:hover,
+          input:-webkit-autofill:focus,
+          input:-webkit-autofill:active {
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: white;
+            transition: background-color 5000s ease-in-out 0s;
+            background-color: rgba(255, 255, 255, 0.05) !important;
+          }
+        `}</style>
+      </div>
     </div>
   );
 };
