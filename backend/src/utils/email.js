@@ -3,7 +3,6 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-// Create transporter (তemporary - কাজ না করলেও Error আসবে না)
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST || 'smtp.gmail.com',
   port: process.env.SMTP_PORT || 587,
@@ -16,12 +15,10 @@ const transporter = nodemailer.createTransport({
 
 export const sendEmail = async options => {
   try {
-    // Temporary - Email না পাঠিয়ে শুধু Log করি
     console.log('📧 Email would be sent to:', options.email);
     console.log('📧 Subject:', options.subject);
     console.log('📧 HTML:', options.html?.substring(0, 100) + '...');
 
-    // Real email send (যদি Configure করা থাকে)
     if (process.env.SMTP_USER && process.env.SMTP_USER !== 'test@test.com') {
       const mailOptions = {
         from: `University Management <${process.env.SMTP_USER}>`,
@@ -37,7 +34,7 @@ export const sendEmail = async options => {
     return { messageId: 'test-email-id' };
   } catch (error) {
     console.error('❌ Email error:', error.message);
-    // Email না পাঠালেও Error throw করবো না
+
     return { messageId: 'fallback-email-id' };
   }
 };

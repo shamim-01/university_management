@@ -87,7 +87,7 @@ class ResultService {
     }
   }
 
-  // ✅ Optimized Search - Faster & Better
+  // Optimized Search - Faster & Better
   async getResultsByStudent(studentId, query) {
     try {
       console.log('📥 Fetching results for student:', studentId);
@@ -111,7 +111,7 @@ class ResultService {
         };
       }
 
-      // ✅ Smart Course Fetch (একবারে সব Course ID নিন)
+      // Smart Course Fetch 
       const courseIds = [...new Set(results.map(r => r.course.toString()))];
       const courses = await Course.find({ _id: { $in: courseIds } }).select(
         'name code credits',
@@ -143,7 +143,7 @@ class ResultService {
         };
       });
 
-      // ✅ Search Filter
+      //  Search Filter
       let filteredResults = formattedResults;
       if (search && search.trim()) {
         const searchLower = search.toLowerCase().trim();

@@ -23,7 +23,7 @@ const PORT = process.env.PORT || 5000;
 // Connect to MongoDB
 connectDB();
 
-// ✅ Updated CORS Configuration - Production Ready
+// Updated CORS Configuration - Production Ready
 const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:5173',
