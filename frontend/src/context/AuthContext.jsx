@@ -1,4 +1,3 @@
-// context/AuthContext.jsx
 import { createContext, useContext, useState, useEffect } from 'react';
 import api from '../services/api';
 
@@ -57,7 +56,7 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   };
 
-  // ✅ Updated: Proper API call with backend response
+  //  Updated: Proper API call with backend response
   const updateProfile = async data => {
     try {
       const response = await api.put('/users/profile', data);
@@ -116,7 +115,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // ✅ New: Get fresh user data from server
+  //  New: Get fresh user data from server
   const refreshUser = async () => {
     try {
       const response = await api.get('/users/profile');
@@ -146,7 +145,7 @@ export const AuthProvider = ({ children }) => {
         logout,
         updateProfile,
         changePassword,
-        refreshUser, // ✅ New function added
+        refreshUser,
         isAdmin,
         isTeacher,
         isStudent,

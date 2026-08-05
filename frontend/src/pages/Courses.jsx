@@ -264,7 +264,7 @@ const Courses = () => {
                   key={course._id}
                   className="group relative bg-white/5 backdrop-blur-xl rounded-2xl overflow-hidden border border-white/10 hover:border-purple-500/40 hover:scale-[1.02] transition-all duration-300 shadow-lg shadow-purple-500/5 hover:shadow-purple-500/20"
                 >
-                  {/* Header with gradient - Improved */}
+                  {/* Header with gradient  */}
                   <div
                     className={`relative bg-gradient-to-r ${colors.from} ${colors.to} p-5`}
                   >
@@ -304,7 +304,7 @@ const Courses = () => {
                     </div>
                   </div>
 
-                  {/* Content - Improved */}
+                  {/* Content  */}
                   <div className="p-5">
                     {course.description && (
                       <p className="text-gray-400 text-sm line-clamp-2 mb-4">
